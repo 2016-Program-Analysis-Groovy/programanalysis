@@ -12,9 +12,6 @@ class MicroCWalker extends MicroCBaseListener {
 
         log.info '\n statements: \n'
         ctx.stmt().each {
-            if(it.childCount > 0) {
-                log.info it.c
-            }
             log.info it.text
         }
     }
