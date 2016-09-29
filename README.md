@@ -9,3 +9,5 @@ To build and run the tests `./gradlew build` (unix) or `gradlew build` (windows)
 
 To parse a microc program `./gradlew run -Pfiles='filepath/filename1,filepath/filename2'` (unix) or `gradlew run -Pfiles='filepath/filename1,filepath/filename2'` (windows)
 files is a comma separated list of arguments to pass to the parser.
+
+To debug in IntelliJ run `./gradlew run --debug-jvm ...` (unix) or `gradlew run --debug-jvm` (windows)
