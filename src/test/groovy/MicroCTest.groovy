@@ -17,14 +17,4 @@ class MicroCTest extends Specification {
         where:
         filename << ['', 'does not exist']
     }
-
-//    def "test valid input"() {
-//        setup: MicroC microC = new MicroC()
-//
-//        when:
-//        microC.main('./src/test/microc/test1.microc')
-//
-//        then:
-//        0 * _ // nothing should happen on success
-//    }
 }
