@@ -5,6 +5,7 @@ import MicroCParser.WriteStmtContext
 import MicroCParser.WhileStmtContext
 import MicroCParser.ReadStmtContext
 import MicroCParser.AssignStmtContext
+import MicroCParser.ContinueStmtContext
 import MicroCParser.StmtContext
 import groovy.util.logging.Slf4j
 import org.antlr.v4.runtime.tree.TerminalNode
@@ -24,9 +25,11 @@ class MicroCWalker extends MicroCBaseListener {
 
     @SuppressWarnings('NoDef')
     void enterProgram(MicroCParser.ProgramContext ctx) {
-        def firstProgramBlock = ctx.children.find { !(it.class == TerminalNodeImpl) }
+        List children = ctx.children
+        children.removeAll { it.class == TerminalNodeImpl }
+        def firstProgramBlock = children.first()
         Block program = processStatement(firstProgramBlock)
-        program.outputs = ctx?.children?.collect { def context ->
+        program.outputs = children.tail().collect { def context ->
             processStatement(context)
         }
         log.info (program*.toString().join('\n'))
@@ -106,6 +109,16 @@ class MicroCWalker extends MicroCBaseListener {
         Break b = new Break()
         b = init(b)
         b.statement = 'break'
+        // assign breakTo
+
+        return b
+    }
+
+    @SuppressWarnings('UnusedMethodParameter')
+    Block processStatement(ContinueStmtContext ctx) {
+        Break b = new Break()
+        b = init(b)
+        b.statement = 'continue'
         // assign breakTo
 
         return b
