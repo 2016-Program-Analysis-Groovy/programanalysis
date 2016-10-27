@@ -28,7 +28,10 @@ class MicroCWalker extends MicroCBaseListener {
         List children = ctx.children
         children.removeAll { it.class == TerminalNodeImpl }
         def firstProgramBlock = children.first()
-        Block program = processStatement(firstProgramBlock)
+        def program = processStatement(firstProgramBlock)
+        if (program.class == ArrayList ) {
+            program = program.first()
+        }
         program.outputs = children.tail().collect { def context ->
             processStatement(context)
         }
