@@ -36,6 +36,9 @@ class MicroCWalker extends MicroCBaseListener {
             processStatement(context)
         }
         log.info (program*.toString().join('\n'))
+
+        // run analyses
+
     }
 
     @SuppressWarnings('UnusedMethodParameter')
