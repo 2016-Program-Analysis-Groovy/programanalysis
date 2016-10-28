@@ -35,10 +35,6 @@ dependencies {
     testCompile 'junit:junit:4.12'
 }
 
-test {
-    testLogging.showStandardStreams = true
-}
-
 codenarc {
     toolVersion = '0.25.2'
 }
@@ -55,6 +51,6 @@ mainClassName = 'MicroC'
 
 run {
     if(project.hasProperty('files')){
-        args(files.split(','))
+        args(files.tokenize(','))
     }
 }
