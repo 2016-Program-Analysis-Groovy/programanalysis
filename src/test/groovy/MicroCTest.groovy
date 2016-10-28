@@ -1,20 +1,38 @@
+import org.antlr.v4.runtime.misc.ParseCancellationException
+
+import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
 
 class MicroCTest extends Specification {
 
-    @Unroll
-    def "test bad inputs"() throws FileNotFoundException {
-        setup:
-        MicroC microC = new MicroC()
+    @Shared
+    List<String> filenames = []
+    MicroC microC = new MicroC()
 
+    def setupSpec() {
+        new File(this.class.getResource('microc/successes').file).eachFile { File file ->
+            filenames << file.path
+        }
+    }
+
+    @Unroll
+    def "test example programs succeed"() {
         when:
         microC.main(filename)
 
         then:
-        thrown FileNotFoundException
+        notThrown FileNotFoundException
 
         where:
-        filename << ['', 'does not exist']
+        filename << filenames
+    }
+
+    def "test unparseable file"() {
+        when:
+        microC.main(this.class.getResource('microc/failures/unparseable.microC').path)
+
+        then:
+        thrown ParseCancellationException
     }
 }
