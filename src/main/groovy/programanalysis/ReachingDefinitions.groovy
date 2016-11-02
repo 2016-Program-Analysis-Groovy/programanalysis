@@ -1,37 +1,20 @@
 package programanalysis
 
+import groovy.util.logging.Slf4j
+
+@Slf4j
 class ReachingDefinitions {
     List<Tuple> workList = []
-    Map<String,List<String>> killTable = [:]
-    Map<String,Closure> equations = [:]
+    Map<String, List<String>> killTable = [:]
+    Map<String, Closure> equations = [:]
 
     List<Tuple> runRDAnalysis(Block program) {
         //set initial result set
         List<Tuple> result = []
 
-        //check initial block
-        checkBlockForVariableAssignment(program)
+        calculateEquations(program)
 
-        //set first equation
-        equations[program.label] = {
-            return result
-        }
-
-        //iterate through blocks
-        program.outputs.each { Block block ->
-            //check each block for variable assignment
-            checkBlockForVariableAssignment(block)
-
-            //calculate equations for each variable at that block label
-            equations[block.label] = {
-                // if variable assigned, then kill/gen and add element to worklist
-
-                // if no variable assigned, then use the inputs
-                block.inputs*.label.collect {
-                    equations[it]
-                }
-            }
-        }
+        workList.each { log.info it.toString() }
 
         //iterate through worklist
         while (!workList.empty) {
@@ -39,7 +22,7 @@ class ReachingDefinitions {
             Tuple item = workList.pop()
 
             //update result set based on equations for each variable at that edge
-            result = equations[item].call()
+            result = equations[item.first()].call()
         }
 
         //return final result
@@ -47,12 +30,38 @@ class ReachingDefinitions {
     }
 
     void checkBlockForVariableAssignment(Block block) {
-        if (block.variableAssigned) {
-            List<String> outputLabels = block.outputs*.label
-            outputLabels.each { label ->
-                workList << new Tuple(block.label, label)
-            }
-            killTable[block.variableAssigned].add(block.label)
+        List<String> outputLabels = block.outputs*.label.flatten()
+        outputLabels.each { label ->
+            workList << new Tuple(block.label, label)
         }
+//        if (block.variableAssigned) {
+//           killTable[block.variableAssigned].push(block.label)
+//        }
+    }
+
+    void calculateEquations(Block block) {
+        if (!block) {
+            return
+        }
+        //check each block for variable assignment
+        checkBlockForVariableAssignment(block)
+
+        //calculate equations for each variable at that block label
+        equations[block.label] = {
+            // if variable assigned, then kill/gen and add element to worklist
+            Map<String, List<String>> variableAssigned = killTable.find {
+                it.value.contains(block.label)
+            }
+            if (variableAssigned) {
+                result.removeAll(variableAssigned.values())
+                result += new Tuple(variableAssigned.keySet().first(), block.label)
+            }
+
+            // if no variable assigned, then use the inputs
+            block.inputs*.label.collect {
+                equations[it]
+            }
+        }
+        block.outputs.each { calculateEquations(it) }
     }
 }
