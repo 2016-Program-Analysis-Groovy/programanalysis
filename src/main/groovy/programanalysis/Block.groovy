@@ -3,8 +3,8 @@ package programanalysis
 class Block {
     String label
     String statement
-    List<Block> inputs
-    List<Block> outputs
+    List<Block> inputs = []
+    List<Block> outputs = []
     List<String> variablesUsed
     String variableAssigned
     Boolean isInitialBlock = false

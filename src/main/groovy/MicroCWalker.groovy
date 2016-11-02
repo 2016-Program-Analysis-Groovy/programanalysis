@@ -11,6 +11,7 @@ import groovy.util.logging.Slf4j
 import org.antlr.v4.runtime.tree.TerminalNode
 import org.antlr.v4.runtime.tree.TerminalNodeImpl
 import programanalysis.Block
+import programanalysis.ReachingDefinitions
 import programanalysis.blocktypes.Assignment
 import programanalysis.blocktypes.Break
 import programanalysis.blocktypes.Declaration
@@ -32,13 +33,25 @@ class MicroCWalker extends MicroCBaseListener {
         if (program.class == ArrayList ) {
             program = program.first()
         }
-        program.outputs = children.tail().collect { def context ->
-            processStatement(context)
-        }
+
+        processListOfBlocks(program, children.tail())
+
         log.info (program*.toString().join('\n'))
 
         // run analyses
+        ReachingDefinitions rdAnalysis = new ReachingDefinitions()
+        rdAnalysis.runRDAnalysis(program)
+    }
 
+    void processListOfBlocks(Block block, List contexts) {
+        if (contexts.empty) {
+            return
+        }
+        Block childBlock = processStatement(contexts.first())
+        block.outputs << childBlock
+//        childBlock.inputs << block
+        childBlock.outputs << processListOfBlocks(childBlock, contexts.tail())
+        childBlock.outputs = childBlock.outputs - null
     }
 
     @SuppressWarnings('UnusedMethodParameter')
@@ -61,9 +74,7 @@ class MicroCWalker extends MicroCBaseListener {
         While w = new While()
         w = init(w)
         w.statement = ctx.expr().text
-        w.outputs = ctx.children.findAll { it.class == StmtContext }.collectMany {
-            processStatement(it)
-        }
+        processListOfBlocks(w, ctx.children.findAll { it.class == StmtContext })
         return w
     }
 
@@ -86,27 +97,30 @@ class MicroCWalker extends MicroCBaseListener {
     @SuppressWarnings('UnusedMethodParameter')
     Block processStatement(ReadStmtContext ctx) {
         Read r = new Read()
-        r = init(r)
-        r.statement = 'read: ' + (ctx.expr()?.text ?: ctx.identifier().text)
+        r.statement = 'read: ' +
+                ( ctx.expr()?.text ? ctx.identifier().text + '[' + ctx.expr().text + ']' : ctx.identifier().text )
         r = init(r)
     }
 
     @SuppressWarnings('[UnusedMethodParameter]')
-    List<Block> processStatement(StmtContext ctx) {
-        List<Block> subStatements = []
-        ctx.children.each { context ->
-           subStatements << processStatement(context)
-        }
-        return subStatements
+    Block processStatement(StmtContext ctx) {
+        Block b = processStatement(ctx.children.first())
+        processListOfBlocks(b, ctx.children.tail())
+        return b
     }
 
     Block processStatement(IfelseStmtContext ctx) {
         Block b = new Block()
         b = init(b)
         b.statement = 'if: ' + ctx.expr().text
-        b.outputs = ctx.children.findAll { it.class == StmtContext }.collect { context ->
-            processStatement(context)
-        }
+        //find first conditional aka if statement
+        Integer elseNode = ctx.children.findIndexOf { it.class == TerminalNodeImpl && it.text == 'else' }
+        List ifCondition = ctx.children[0..elseNode]
+        processListOfBlocks(b, ifCondition.findAll { it.class == StmtContext })
+        //find second conditional aka else statement
+        List elseCondition = ctx.children - ifCondition
+        processListOfBlocks(b, elseCondition.findAll { it.class == StmtContext })
+        b.outputs = b.outputs - null
         return b
     }
 
