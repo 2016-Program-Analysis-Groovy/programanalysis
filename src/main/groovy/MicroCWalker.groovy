@@ -14,7 +14,9 @@ import programanalysis.Block
 import programanalysis.ReachingDefinitions
 import programanalysis.blocktypes.Assignment
 import programanalysis.blocktypes.Break
+import programanalysis.blocktypes.Continue
 import programanalysis.blocktypes.Declaration
+import programanalysis.blocktypes.If
 import programanalysis.blocktypes.Read
 import programanalysis.blocktypes.While
 import programanalysis.blocktypes.Write
@@ -23,35 +25,60 @@ import programanalysis.blocktypes.Write
 class MicroCWalker extends MicroCBaseListener {
 
     final Integer labelCounter = 1
+    List<Block> program = []
 
     @SuppressWarnings('NoDef')
     void enterProgram(MicroCParser.ProgramContext ctx) {
         List children = ctx.children
         children.removeAll { it.class == TerminalNodeImpl }
         def firstProgramBlock = children.first()
-        def program = processStatement(firstProgramBlock)
-        if (program.class == ArrayList ) {
-            program = program.first()
+        def initBlock = processStatement(firstProgramBlock)
+        if (initBlock.class == ArrayList) {
+            initBlock = initBlock.first()
         }
 
-        processListOfBlocks(program, children.tail())
+        processListOfBlocks(initBlock, children.tail(), true)
 
-        log.info (program*.toString().join('\n'))
+        log.info(program*.toString().join('\n'))
 
         // run analyses
         ReachingDefinitions rdAnalysis = new ReachingDefinitions()
         rdAnalysis.runRDAnalysis(program)
     }
 
-    void processListOfBlocks(Block block, List contexts) {
+    void processListOfBlocks(Block block, List contexts, Boolean isRootContext = false) {
         if (contexts.empty) {
+            if (isRootContext) {
+                block.isTerminalBlock = true
+                return
+            }
+            //TODO: find a way to differentiate between final(S1) and final(S2)
+            Block whileBlock = findWhileLoop(block)
+            if (whileBlock) {
+                block.outputs << whileBlock.label
+                whileBlock.breakTo = 'l' + labelCounter
+
+                //TODO: fix this!!
+                Break halfBakedBreak = program.find { it.class == Break && it.breakTo == whileBlock.label }
+                if (halfBakedBreak) {
+                    halfBakedBreak.breakTo = whileBlock.breakTo
+                }
+            }
             return
         }
         Block childBlock = processStatement(contexts.first())
-        block.outputs << childBlock
-//        childBlock.inputs << block
-        childBlock.outputs << processListOfBlocks(childBlock, contexts.tail())
-        childBlock.outputs = childBlock.outputs - null
+        block.outputs << childBlock.label
+        childBlock.inputs << block.label
+        if (childBlock.class == Continue) {
+            childBlock.breakTo = findWhileLoop(childBlock)?.label
+            childBlock.outputs << childBlock.breakTo
+        } else if (childBlock.class == Break) {
+            While whileBlock = findWhileLoop(childBlock)
+            childBlock.breakTo = whileBlock
+        } else {
+            childBlock.outputs << processListOfBlocks(childBlock, contexts.tail(), isRootContext)
+            childBlock.outputs = childBlock.outputs - null
+        }
     }
 
     @SuppressWarnings('UnusedMethodParameter')
@@ -98,19 +125,19 @@ class MicroCWalker extends MicroCBaseListener {
     Block processStatement(ReadStmtContext ctx) {
         Read r = new Read()
         r.statement = 'read: ' +
-                ( ctx.expr()?.text ? ctx.identifier().text + '[' + ctx.expr().text + ']' : ctx.identifier().text )
+                (ctx.expr()?.text ? ctx.identifier().text + '[' + ctx.expr().text + ']' : ctx.identifier().text)
         r = init(r)
     }
 
     @SuppressWarnings('[UnusedMethodParameter]')
     Block processStatement(StmtContext ctx) {
+        //S1
         Block b = processStatement(ctx.children.first())
-        processListOfBlocks(b, ctx.children.tail())
         return b
     }
 
     Block processStatement(IfelseStmtContext ctx) {
-        Block b = new Block()
+        If b = new If()
         b = init(b)
         b.statement = 'if: ' + ctx.expr().text
         //find first conditional aka if statement
@@ -129,17 +156,14 @@ class MicroCWalker extends MicroCBaseListener {
         Break b = new Break()
         b = init(b)
         b.statement = 'break'
-        // assign breakTo
-
         return b
     }
 
     @SuppressWarnings('UnusedMethodParameter')
     Block processStatement(ContinueStmtContext ctx) {
-        Break b = new Break()
+        Continue b = new Continue()
         b = init(b)
         b.statement = 'continue'
-        // assign breakTo
 
         return b
     }
@@ -162,6 +186,22 @@ class MicroCWalker extends MicroCBaseListener {
             b.isInitialBlock = true
         }
         labelCounter++
+        program << b
         return b
+    }
+
+    Block findWhileLoop(Block child) {
+        List<Block> parents = program.findAll {
+            it.label in child?.inputs
+        }
+        Block whileLoopParent = parents.find { it.class == While }
+        if (whileLoopParent) {
+            return whileLoopParent
+        }
+        List<Block> directParents = parents
+        List<Block> allWhileLoopParents = directParents.collect {
+            findWhileLoop(it)
+        }
+        return allWhileLoopParents ? allWhileLoopParents.first() : null
     }
 }

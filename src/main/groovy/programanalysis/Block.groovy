@@ -3,8 +3,8 @@ package programanalysis
 class Block {
     String label
     String statement
-    List<Block> inputs = []
-    List<Block> outputs = []
+    List<String> inputs = []
+    List<String> outputs = []
     List<String> variablesUsed
     String variableAssigned
     Boolean isInitialBlock = false
@@ -20,10 +20,10 @@ class Block {
         output += variables
 
         if (!this.isInitialBlock && this.inputs) {
-            output += 'inputs: ' + this.inputs + '\n'
+            output += 'inputs: ' + this.inputs.toString() + '\n'
         }
         if (!this.isTerminalBlock && this.outputs) {
-            output += 'outputs: \n' + this.outputs*.toString().join('')
+            output += 'outputs: \n' + this.outputs.toString()
         }
 
         return output + '----'
