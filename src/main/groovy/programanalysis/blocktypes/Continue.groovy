@@ -2,7 +2,7 @@ package programanalysis.blocktypes
 
 import programanalysis.Block
 
-class Break extends Block {
+class Continue extends Block {
     String breakTo
 
     @Override
