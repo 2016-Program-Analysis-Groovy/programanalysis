@@ -17,7 +17,7 @@ class MicroCTest extends Specification {
     }
 
     @Unroll
-    def "test example programs succeed"() {
+    def "test example programs succeed #filename"() {
         when:
         microC.main(filename)
 

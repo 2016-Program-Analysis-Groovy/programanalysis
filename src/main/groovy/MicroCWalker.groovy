@@ -38,6 +38,26 @@ class MicroCWalker extends MicroCBaseListener {
         }
 
         processListOfBlocks(initBlock, children.tail(), true)
+        List<Break> breakBlocks = program.findAll { it.class == Break }
+        breakBlocks.each { breakBlock ->
+            While whileLoop = findParentOfType(breakBlock, While)
+
+            //covers case where there is a break within a while loop
+            if (whileLoop) {
+                breakBlock.breakTo = whileLoop.breakTo
+                breakBlock.outputs = [whileLoop.breakTo]
+            }
+        }
+
+        List<Break> continueBlocks = program.findAll { it.class == Continue }
+        continueBlocks.each { continueBlock ->
+            While whileLoop = findParentOfType(continueBlock, While)
+
+            if (whileLoop) {
+                continueBlock.breakTo = whileLoop.label
+                continueBlock.outputs = [whileLoop.label]
+            }
+        }
 
         log.info(program*.toString().join('\n'))
 
@@ -46,39 +66,50 @@ class MicroCWalker extends MicroCBaseListener {
         rdAnalysis.runRDAnalysis(program)
     }
 
-    void processListOfBlocks(Block block, List contexts, Boolean isRootContext = false) {
+    void processListOfBlocks(Block block, List contexts, Boolean isRootContext = false,
+                             Boolean isHierarchical = false) {
         if (contexts.empty) {
+
+            //case where program ends
             if (isRootContext) {
                 block.isTerminalBlock = true
                 return
             }
-            //TODO: find a way to differentiate between final(S1) and final(S2)
-            Block whileBlock = findWhileLoop(block)
-            if (whileBlock) {
-                block.outputs << whileBlock.label
-                whileBlock.breakTo = 'l' + labelCounter
 
-                //TODO: fix this!!
-                Break halfBakedBreak = program.find { it.class == Break && it.breakTo == whileBlock.label }
-                if (halfBakedBreak) {
-                    halfBakedBreak.breakTo = whileBlock.breakTo
+            // case: final(s)
+            Block whileBlock = findParentOfType(block, While)
+            if (whileBlock) {
+                whileBlock.breakTo = 'l' + labelCounter
+                if (block.class != Break) {
+                    block.outputs << whileBlock.label
+                } else {
+                    block.outputs = whileBlock.breakTo
                 }
+            }
+
+            Block ifStatement = findParentOfType(block, If)
+            if (ifStatement && block.class != Break && block.class != Continue && block.label != ifStatement.breakTo) {
+                block.endOfStatement = ifStatement.label
             }
             return
         }
+
         Block childBlock = processStatement(contexts.first())
-        block.outputs << childBlock.label
-        childBlock.inputs << block.label
-        if (childBlock.class == Continue) {
-            childBlock.breakTo = findWhileLoop(childBlock)?.label
-            childBlock.outputs << childBlock.breakTo
-        } else if (childBlock.class == Break) {
-            While whileBlock = findWhileLoop(childBlock)
-            childBlock.breakTo = whileBlock
+
+        if (block.class == If && !isHierarchical) {
+            List<Block> finalStatementBlocks = program.findAll { it.endOfStatement == block.label }
+            finalStatementBlocks.each {
+                it.outputs << childBlock.label
+            }
+            childBlock.inputs.addAll(finalStatementBlocks*.label)
+            block.breakTo = childBlock.label
         } else {
-            childBlock.outputs << processListOfBlocks(childBlock, contexts.tail(), isRootContext)
-            childBlock.outputs = childBlock.outputs - null
+            block.outputs << childBlock.label
+            childBlock.inputs << block.label
         }
+        childBlock.outputs = childBlock.outputs - null
+
+        processListOfBlocks(childBlock, contexts.tail(), isRootContext, isHierarchical)
     }
 
     @SuppressWarnings('UnusedMethodParameter')
@@ -143,10 +174,10 @@ class MicroCWalker extends MicroCBaseListener {
         //find first conditional aka if statement
         Integer elseNode = ctx.children.findIndexOf { it.class == TerminalNodeImpl && it.text == 'else' }
         List ifCondition = ctx.children[0..elseNode]
-        processListOfBlocks(b, ifCondition.findAll { it.class == StmtContext })
+        processListOfBlocks(b, ifCondition.findAll { it.class == StmtContext }, false, true)
         //find second conditional aka else statement
         List elseCondition = ctx.children - ifCondition
-        processListOfBlocks(b, elseCondition.findAll { it.class == StmtContext })
+        processListOfBlocks(b, elseCondition.findAll { it.class == StmtContext }, false, true)
         b.outputs = b.outputs - null
         return b
     }
@@ -190,18 +221,18 @@ class MicroCWalker extends MicroCBaseListener {
         return b
     }
 
-    Block findWhileLoop(Block child) {
+    Block findParentOfType(Block child, Class type) {
         List<Block> parents = program.findAll {
             it.label in child?.inputs
         }
-        Block whileLoopParent = parents.find { it.class == While }
-        if (whileLoopParent) {
-            return whileLoopParent
+        Block parent = parents.find { it.class == type }
+        if (parent) {
+            return parent
         }
         List<Block> directParents = parents
-        List<Block> allWhileLoopParents = directParents.collect {
-            findWhileLoop(it)
+        List<Block> allParentsOfType = directParents.collect {
+            findParentOfType(it, type)
         }
-        return allWhileLoopParents ? allWhileLoopParents.first() : null
+        return allParentsOfType ? allParentsOfType.first() : null
     }
 }

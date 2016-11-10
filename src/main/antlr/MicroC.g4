@@ -42,28 +42,35 @@ grammar MicroC;
   VOID : 'void';
 
 
-
-expr : expr1
-      | expr1 PLUS expr
-      | expr1 MINUS expr
-	  | expr1 OR expr;
+	  
+aexpr : expr1
+      | expr1 PLUS aexpr
+      | expr1 MINUS aexpr;
 
 expr1 : expr2
        | expr2 MUL expr1
-       | expr2 DIV expr1 
-	   | expr2 AND expr1 ;
-
-expr2 : exprnegate
-       | expr3
-	   | expr3 opr expr
-       ;
+       | expr2 DIV expr1 ;
 	   
-exprnegate: MINUS expr
-           | NOT expr;
-       
-expr3 : identifier (LBRACKET expr RBRACKET)?
+expr2 : exprnegate
+       | identifier (LBRACKET expr RBRACKET)?
        | integer
        ;
+
+expr : bexpr1
+       | bexpr1 OR expr
+       ;
+	   
+bexpr1 : bexpr2
+        | bexpr2 AND bexpr1;
+		
+bexpr2 :aexpr opr aexpr
+       |aexpr;
+	
+exprnegate:
+           |MINUS expr
+           | NOT expr;
+       
+
 
 
 opr : GT
@@ -100,7 +107,7 @@ breakStmt : BREAK SEMI ;
 
 writeStmt : WRITE expr SEMI ;
 
-ifelseStmt : IF LPAREN expr RPAREN  LBRACE stmt+ RBRACE (ELSE LBRACE stmt+ RBRACE)* ;
+ifelseStmt : IF LPAREN expr RPAREN  LBRACE stmt+ RBRACE (ELSE LBRACE stmt+ RBRACE)? ;
 
 
 whileStmt : WHILE LPAREN expr RPAREN  LBRACE stmt+ RBRACE ;

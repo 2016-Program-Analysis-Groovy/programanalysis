@@ -9,6 +9,7 @@ class Block {
     String variableAssigned
     Boolean isInitialBlock = false
     Boolean isTerminalBlock = false
+    String endOfStatement
 
     String toString() {
         String output = """
@@ -23,19 +24,19 @@ class Block {
             output += 'inputs: ' + this.inputs.toString() + '\n'
         }
         if (!this.isTerminalBlock && this.outputs) {
-            output += 'outputs: \n' + this.outputs.toString()
+            output += 'outputs: ' + this.outputs.toString() + '\n'
         }
 
-        return output + '----'
+        return output
     }
 
     String getProperties() {
         String output = ''
-        if (isTerminalBlock) {
-            output += 'Terminal Block\n'
-        }
         if (isInitialBlock) {
-            output += 'Initial Block\n'
+            output += 'Initial Block ----\n'
+        }
+        if (isTerminalBlock) {
+            output += 'Terminal Block ----\n'
         }
         return output
     }
