@@ -1,0 +1,15 @@
+{ int i; int x; int y; int z;
+  int A[10];
+  while (i<10)
+        { A[i] = i; i=i+1;
+        }
+  i=0;
+  while (i<10)
+        { if (!A)
+             { x=x+A[i]; i=i+1;}
+          else { i=i+1; continue; } /* this is a comment */
+          y=y+1;
+        }
+  write x/y;
+  read z;
+}

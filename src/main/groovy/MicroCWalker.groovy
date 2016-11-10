@@ -63,7 +63,7 @@ class MicroCWalker extends MicroCBaseListener {
 
         // run analyses
         ReachingDefinitions rdAnalysis = new ReachingDefinitions()
-        rdAnalysis.runRDAnalysis(program)
+        rdAnalysis.rdAnalysisWithFIFO(program)
     }
 
     void processListOfBlocks(Block block, List contexts, Boolean isRootContext = false,
@@ -157,6 +157,8 @@ class MicroCWalker extends MicroCBaseListener {
         Read r = new Read()
         r.statement = 'read: ' +
                 (ctx.expr()?.text ? ctx.identifier().text + '[' + ctx.expr().text + ']' : ctx.identifier().text)
+        r.variableAssigned = ctx.identifier().text
+        r.variablesUsed = ctx.expr()?.text ? [ctx.expr().text] : null
         r = init(r)
     }
 
