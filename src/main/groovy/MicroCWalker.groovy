@@ -63,7 +63,12 @@ class MicroCWalker extends MicroCBaseListener {
 
         // run analyses
         ReachingDefinitions rdAnalysis = new ReachingDefinitions()
-        rdAnalysis.rdAnalysisWithFIFO(program)
+        Map rdAnalysisWithFifoResult = rdAnalysis.rdAnalysisWithFIFO(program)
+        String output
+        output = rdAnalysisWithFifoResult.collect { key, value ->
+            '\nkey: ' + key + '     ' + value.toString()
+        }
+        log.info output
     }
 
     void processListOfBlocks(Block block, List contexts, Boolean isRootContext = false,

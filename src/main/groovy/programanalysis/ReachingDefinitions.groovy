@@ -7,45 +7,53 @@ class ReachingDefinitions {
     List<Tuple> workList = []
     Map rdEntries = [:]
     Map rdExit = [:]
-    Map rdKill = [:]
-    Map rdGen = [:]
+    Map<String, List<Tuple>> rdKill = [:]
+    Map<String, Tuple> rdGen = [:]
 
     Map<String, List<Tuple>> rdAnalysisWithFIFO(List<Block> program) {
         program.each { Block block ->
             rdEntries[block.label] = []
-            addEdgesToWorkList(block)
-            if (block.variableAssigned){
-                List<Tuple> influencedBlocks = rdKill.values().findAll{ it.first == block.variableAssigned}
-                influencedBlocks.each { String variable, String influencedBlockLabel ->
-                    rdKill[influencedBlockLabel] = rdKill[influencedBlockLabel] + new Tuple(variable, block.label)
-                    rdKill[block.label] = rdKill[block.label] + new Tuple(variable, influencedBlockLabel)
+            addEdgesToEndOfWorkList(block)
+            if (block.variableAssigned) {
+                List<Tuple> influencedBlocks = rdKill.values().find {
+                    it.findAll { it.first() == block.variableAssigned }
                 }
-                rdKill[block.label] = rdKill[block.label] + new Tuple(block.variableAssigned, block.label)
+                influencedBlocks.each { Tuple blockTuple ->
+                    String variable = blockTuple.first()
+                    String influencedBlockLabel = blockTuple.last()
+                    rdKill[influencedBlockLabel] = rdKill[influencedBlockLabel] + [new Tuple(variable, block.label)]
+                }
+                rdKill[block.label] = influencedBlocks ?
+                        influencedBlocks + [new Tuple(block.variableAssigned, block.label)] :
+                        [new Tuple(block.variableAssigned, block.label)]
 
-                rdGen[block.label] = new Tuple(block.variableAssigned, block.label)
+                rdGen[block.label] = [new Tuple(block.variableAssigned, block.label)]
             }
         }
 
-        while(!workList.empty){
+        String workListToString = workList.join('\n')
+        log.info workListToString
+
+        while (!workList.empty) {
             Tuple workListItem = workList.first()
+            workList = workList.drop(1)
             String l = workListItem.first()
             String lPrime = workListItem.last()
-            rdExit[l] = (rdEntries[l] - rdKill[l] ) + rdGen[l]
-            if (rdExit[l].any{
-                !(it in rdEntries[lPrime])
-            }) {
-                rdEntries[lPrime] += rdExit[l]
-                Block lPrimeBlock = program.find{it.label == lPrime}
-                addEdgesToWorkList(lPrimeBlock)
+            rdExit[l] = (rdEntries[l] - rdKill[l])
+            if (rdGen[l]) {
+                rdExit[l] = rdExit[l] + rdGen[l]
+            }
+            if (rdExit[l].any { !(it in rdEntries[lPrime]) }) {
+                List<Tuple> tuplesNotInResult = rdExit[l].findAll { !(it in rdEntries[lPrime]) }
+                rdEntries[lPrime].addAll(tuplesNotInResult)
+                Block lPrimeBlock = program.find { it.label == lPrime }
+                addEdgesToEndOfWorkList(lPrimeBlock)
             }
         }
-        String workListToString = workList.collect{it.toString()}.join('\n')
-        log.info workListToString
         return rdExit
-
     }
 
-    private addEdgesToWorkList(Block block){
+    private addEdgesToEndOfWorkList(Block block) {
         block.outputs.each {
             workList << new Tuple(block.label, it)
         }
