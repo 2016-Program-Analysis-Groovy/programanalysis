@@ -174,6 +174,17 @@ class MicroCWalker extends MicroCBaseListener {
         return b
     }
 
+    @SuppressWarnings('[UnusedMethodParameter]')
+    Block processStatement(MicroCParser.BlockStmtContext ctx) {
+        //S1
+        List children = ctx.children.findAll {
+            it.class != TerminalNodeImpl
+        }
+        Block b = processStatement(children.first())
+        processListOfBlocks(b, children.tail())
+        return b
+    }
+
     Block processStatement(IfelseStmtContext ctx) {
         If b = new If()
         b = init(b)
