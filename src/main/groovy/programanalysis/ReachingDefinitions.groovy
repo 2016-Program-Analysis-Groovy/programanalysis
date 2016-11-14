@@ -37,25 +37,34 @@ class ReachingDefinitions {
         while (!workList.empty) {
             Tuple workListItem = workList.first()
             workList = workList.drop(1)
-            String l = workListItem.first()
-            String lPrime = workListItem.last()
-            rdExit[l] = (rdEntries[l] - rdKill[l])
-            if (rdGen[l]) {
-                rdExit[l] = rdExit[l] + rdGen[l]
-            }
-            if (rdExit[l].any { !(it in rdEntries[lPrime]) }) {
-                List<Tuple> tuplesNotInResult = rdExit[l].findAll { !(it in rdEntries[lPrime]) }
-                rdEntries[lPrime].addAll(tuplesNotInResult)
-                Block lPrimeBlock = program.find { it.label == lPrime }
-                addEdgesToEndOfWorkList(lPrimeBlock)
-            }
+            calculateSolution(workListItem.first(), workListItem.last())
+
+            Block lPrimeBlock = program.find { it.label == workListItem.last() }
+            addEdgesToEndOfWorkList(lPrimeBlock)
         }
+
+        //to calculate exit of last block
+        calculateSolution(new Tuple(program.last().label, null) )
+
         return rdExit
     }
 
     private addEdgesToEndOfWorkList(Block block) {
         block.outputs.each {
             workList << new Tuple(block.label, it)
+        }
+    }
+
+    void calculateSolution(String l, String lPrime) {
+        rdExit[l] = (rdEntries[l] - rdKill[l])
+        if (rdGen[l]) {
+            rdExit[l] = rdExit[l] + rdGen[l]
+        }
+        if (lPrime) {
+            if (rdExit[l].any { !(it in rdEntries[lPrime]) }) {
+                List<Tuple> tuplesNotInResult = rdExit[l].findAll { !(it in rdEntries[lPrime]) }
+                rdEntries[lPrime].addAll(tuplesNotInResult)
+            }
         }
     }
 }

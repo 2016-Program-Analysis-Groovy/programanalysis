@@ -1,0 +1,27 @@
+{
+    int x;
+    x = 100;
+    while (x > 0) {
+        {
+            int y;
+            y = 50;
+            while (y > 0) {
+                {
+                    int z;
+                    z = 10;
+                    while (z > 0) {
+                        if (z == 1) {
+                            break;
+                        } else {
+                            z = z - 2;
+                            continue;
+                        }
+                    }
+                }
+                y = y - 1;
+            }
+        }
+        x = x - 5;
+    }
+    write z;
+}
