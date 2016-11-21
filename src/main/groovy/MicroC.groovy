@@ -22,6 +22,7 @@ class MicroC {
                 MicroCParser parser = new MicroCParser(tokens)
                 parser.setErrorHandler(new BailErrorStrategy())
                 ParseTree tree = parser.program()
+
                 ParseTreeWalker walker = new ParseTreeWalker()
                 walker.walk(new MicroCWalker(), tree)
             }

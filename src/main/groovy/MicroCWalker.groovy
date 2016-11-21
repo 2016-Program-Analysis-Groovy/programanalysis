@@ -1,23 +1,40 @@
+import MicroCParser.AexprContext
+import MicroCParser.Bexpr1Context
+import MicroCParser.Bexpr2Context
 import MicroCParser.BreakStmtContext
 import MicroCParser.DeclContext
+import MicroCParser.Expr2Context
+import MicroCParser.ExprContext
+import MicroCParser.IdentifierContext
 import MicroCParser.IfelseStmtContext
+import MicroCParser.IntegerContext
 import MicroCParser.WriteStmtContext
 import MicroCParser.WhileStmtContext
 import MicroCParser.ReadStmtContext
 import MicroCParser.AssignStmtContext
 import MicroCParser.ContinueStmtContext
+import MicroCParser.Expr1Context
 import MicroCParser.StmtContext
 import groovy.util.logging.Slf4j
 import org.antlr.v4.runtime.tree.TerminalNode
 import org.antlr.v4.runtime.tree.TerminalNodeImpl
 import programanalysis.Block
 import programanalysis.ReachingDefinitions
+import programanalysis.blocktypes.Addition
+import programanalysis.blocktypes.And
 import programanalysis.blocktypes.Assignment
 import programanalysis.blocktypes.Break
 import programanalysis.blocktypes.Continue
 import programanalysis.blocktypes.Declaration
+import programanalysis.blocktypes.Division
+import programanalysis.blocktypes.Identifier
 import programanalysis.blocktypes.If
+import programanalysis.blocktypes.IntegerBlock
+import programanalysis.blocktypes.Multiplication
+import programanalysis.blocktypes.OPR
+import programanalysis.blocktypes.OR
 import programanalysis.blocktypes.Read
+import programanalysis.blocktypes.Subtraction
 import programanalysis.blocktypes.While
 import programanalysis.blocktypes.Write
 
@@ -32,12 +49,12 @@ class MicroCWalker extends MicroCBaseListener {
         List children = ctx.children
         children.removeAll { it.class == TerminalNodeImpl }
         def firstProgramBlock = children.first()
-        def initBlock = processStatement(firstProgramBlock)
+        def initBlock = visit(firstProgramBlock)
         if (initBlock.class == ArrayList) {
             initBlock = initBlock.first()
         }
 
-        processListOfBlocks(initBlock, children.tail(), true)
+        visitListOfBlocks(initBlock, children.tail(), true)
         List<Break> breakBlocks = program.findAll { it.class == Break }
         breakBlocks.each { breakBlock ->
             While whileLoop = findParentOfType(breakBlock, While)
@@ -71,8 +88,8 @@ class MicroCWalker extends MicroCBaseListener {
         log.info output
     }
 
-    void processListOfBlocks(Block block, List contexts, Boolean isRootContext = false,
-                             Boolean isHierarchical = false) {
+    void visitListOfBlocks(Block block, List contexts, Boolean isRootContext = false,
+                           Boolean isHierarchical = false) {
         if (contexts.empty) {
 
             //case where program ends
@@ -99,7 +116,7 @@ class MicroCWalker extends MicroCBaseListener {
             return
         }
 
-        Block childBlock = processStatement(contexts.first())
+        Block childBlock = visit(contexts.first())
 
         if (block.class == If && !isHierarchical) {
             List<Block> finalStatementBlocks = program.findAll { it.endOfStatement == block.label }
@@ -114,7 +131,7 @@ class MicroCWalker extends MicroCBaseListener {
         }
         childBlock.outputs = childBlock.outputs - null
 
-        processListOfBlocks(childBlock, contexts.tail(), isRootContext, isHierarchical)
+        visitListOfBlocks(childBlock, contexts.tail(), isRootContext, isHierarchical)
     }
 
     @SuppressWarnings('UnusedMethodParameter')
@@ -122,91 +139,88 @@ class MicroCWalker extends MicroCBaseListener {
         log.info 'finished program'
     }
 
-    Block processStatement(DeclContext ctx) {
+    Block visit(DeclContext ctx) {
         Declaration b = new Declaration()
         b = init(b)
 
         b.variableType = ctx.type().text
-        b.variableAssigned = ctx.identifier().text
+        b.variableAssigned = visit(ctx.identifier())
         b.statement = "$b.variableType $b.variableAssigned"
         return b
     }
 
     @SuppressWarnings('UnusedMethodParameter')
-    Block processStatement(WhileStmtContext ctx) {
+    Block visit(WhileStmtContext ctx) {
         While w = new While()
         w = init(w)
         w.statement = ctx.expr().text
-        processListOfBlocks(w, ctx.children.findAll { it.class == StmtContext })
+        visitListOfBlocks(w, ctx.children.findAll { it.class == StmtContext })
         return w
     }
 
     @SuppressWarnings('UnusedMethodParameter')
-    Block processStatement(AssignStmtContext ctx) {
+    Block visit(AssignStmtContext ctx) {
         Assignment a = new Assignment()
         a = init(a)
-        a.variableAssigned = ctx.identifier().text
-        a.statement = a.variableAssigned
-        if (ctx.expr().size() > 2) {
-            a.statement += '[' + ctx.expr().first() + '] = ' + ctx.expr().tail().join(' ')
-        } else {
-            a.statement += ' = ' + ctx.expr()?.getAt(0)
-        }
+        a.variableAssigned = visit(ctx.identifier())
+        a.statement = ctx.text
+        a.variablesUsed = visit(ctx.expr()) as List
         return a
     }
 
     @SuppressWarnings('UnusedMethodParameter')
-    Block processStatement(WriteStmtContext ctx) {
+    Block visit(WriteStmtContext ctx) {
         Write w = new Write()
         w.statement = 'write: ' + ctx.expr().text
         w = init(w)
     }
 
     @SuppressWarnings('UnusedMethodParameter')
-    Block processStatement(ReadStmtContext ctx) {
+    Block visit(ReadStmtContext ctx) {
         Read r = new Read()
+        init(r)
         r.statement = 'read: ' +
                 (ctx.expr()?.text ? ctx.identifier().text + '[' + ctx.expr().text + ']' : ctx.identifier().text)
-        r.variableAssigned = ctx.identifier().text
-        r.variablesUsed = ctx.expr()?.text ? [ctx.expr().text] : null
-        r = init(r)
+        r.variableAssigned = visit(ctx.identifier())
+        r.variablesUsed = visit(ctx.expr()) as List
+        return r
     }
 
     @SuppressWarnings('[UnusedMethodParameter]')
-    Block processStatement(StmtContext ctx) {
+    Block visit(StmtContext ctx) {
         //S1
-        Block b = processStatement(ctx.children.first())
+        Block b = visit(ctx.getChild(0))
         return b
     }
 
     @SuppressWarnings('[UnusedMethodParameter]')
-    Block processStatement(MicroCParser.BlockStmtContext ctx) {
+    Block visit(MicroCParser.BlockStmtContext ctx) {
         //S1
         List children = ctx.children.findAll {
             it.class != TerminalNodeImpl
         }
-        Block b = processStatement(children.first())
-        processListOfBlocks(b, children.tail())
+        Block b = visit(children.first())
+        visitListOfBlocks(b, children.tail())
         return b
     }
 
-    Block processStatement(IfelseStmtContext ctx) {
+    Block visit(IfelseStmtContext ctx) {
         If b = new If()
         b = init(b)
         b.statement = 'if: ' + ctx.expr().text
         //find first conditional aka if statement
         Integer elseNode = ctx.children.findIndexOf { it.class == TerminalNodeImpl && it.text == 'else' }
         List ifCondition = ctx.children[0..elseNode]
-        processListOfBlocks(b, ifCondition.findAll { it.class == StmtContext }, false, true)
+        visitListOfBlocks(b, ifCondition.findAll { it.class == StmtContext }, false, true)
         //find second conditional aka else statement
         List elseCondition = ctx.children - ifCondition
-        processListOfBlocks(b, elseCondition.findAll { it.class == StmtContext }, false, true)
+        visitListOfBlocks(b, elseCondition.findAll { it.class == StmtContext }, false, true)
         b.outputs = b.outputs - null
         return b
     }
 
     @SuppressWarnings('UnusedMethodParameter')
-    Block processStatement(BreakStmtContext ctx) {
+    Block visit(BreakStmtContext ctx) {
         Break b = new Break()
         b = init(b)
         b.statement = 'break'
@@ -214,7 +228,7 @@ class MicroCWalker extends MicroCBaseListener {
     }
 
     @SuppressWarnings('UnusedMethodParameter')
-    Block processStatement(ContinueStmtContext ctx) {
+    Block visit(ContinueStmtContext ctx) {
         Continue b = new Continue()
         b = init(b)
         b.statement = 'continue'
@@ -223,12 +237,12 @@ class MicroCWalker extends MicroCBaseListener {
     }
 
     @SuppressWarnings('UnusedMethodParameter')
-    Block processStatement(TerminalNode ctx) {
+    Block visit(TerminalNode ctx) {
         return null
     }
 
     @SuppressWarnings('UnusedMethodParameter')
-    Block processStatement(TerminalNodeImpl ctx) {
+    Block visit(TerminalNodeImpl ctx) {
         assert ctx
         return null
     }
@@ -257,5 +271,99 @@ class MicroCWalker extends MicroCBaseListener {
             findParentOfType(it, type)
         }
         return allParentsOfType ? allParentsOfType.first() : null
+    }
+
+    Block visit(ExprContext exprContext) {
+        if (exprContext.childCount > 1) {
+            OR or = new OR()
+            init(or)
+            or.left = visit(exprContext.getChild(0))
+            or.right = visit(exprContext.getChild(2))
+            return or
+        }
+        return visit(exprContext.getChild(0))
+    }
+
+    Block visit(AexprContext aexprContext) {
+        if (aexprContext.childCount > 1) {
+            String operator = aexprContext.getChild(1)
+            if (operator == '+') {
+                Addition addition = new Addition()
+                init(addition)
+                addition.left = visit(aexprContext.getChild(0))
+                addition.right = visit(aexprContext.getChild(2))
+                return addition
+            }
+            Subtraction subtraction = new Subtraction()
+            subtraction.left = visit(aexprContext.getChild(0))
+            subtraction.right = visit(aexprContext.getChild(2))
+            return subtraction
+        }
+        return visit(aexprContext.getChild(0))
+    }
+    Block visit(Bexpr1Context bexpr1Context) {
+        if (bexpr1Context.childCount > 1 ) {
+            And and = new And()
+            init(and)
+            and.left = visit(bexpr1Context.getChild(0))
+            and.right = visit(bexpr1Context.getChild(1))
+            return and
+        }
+        return visit(bexpr1Context.getChild(0))
+    }
+
+    Block visit(Bexpr2Context bexpr2Context) {
+        if (bexpr2Context.childCount > 1) {
+            OPR opr = new OPR()
+            init(opr)
+            opr.operand = bexpr2Context.getChild(1).text
+            opr.left = bexpr2Context.getChild(0)
+            opr.right = bexpr2Context.getChild(2)
+            return opr
+        }
+        return visit(bexpr2Context.getChild(0))
+    }
+
+    Block visit(Expr1Context expr1Context) {
+        if (expr1Context.childCount > 1) {
+            String operator = expr1Context.getChild(1)
+            if (operator == '*') {
+                Multiplication multiplication = new Multiplication()
+                init(multiplication)
+                multiplication.left = visit(expr1Context.getChild(0))
+                multiplication.right = visit(expr1Context.getChild(2))
+                return multiplication
+            }
+            Division division = new Division()
+            init(division)
+            division.left = visit(expr1Context.getChild(0))
+            division.right = visit(expr1Context.getChild(2))
+            return division
+        }
+        return visit(expr1Context.getChild(0))
+    }
+
+    Block visit(Expr2Context expr2Context) {
+        if (expr2Context.childCount > 1) {
+            Assignment assignment = new Assignment()
+            init(assignment)
+            assignment.left = visit(expr2Context.getChild(0))
+            assignment.right = visit(expr2Context.getChild(2))
+        }
+        return visit(expr2Context.getChild(0))
+    }
+
+    Block visit(IntegerContext integerContext) {
+        IntegerBlock block = new IntegerBlock()
+        init(block)
+        block.statement = integerContext.text
+        return block
+    }
+
+    Block visit(IdentifierContext identifierContext) {
+        Identifier identifier = new Identifier()
+        init(identifier)
+        identifier.statement = identifierContext.text
+        return identifier
     }
 }

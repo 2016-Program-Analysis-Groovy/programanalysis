@@ -2,7 +2,7 @@ package programanalysis.blocktypes
 
 import programanalysis.Block
 
-class Assignment extends Block {
+class Subtraction extends Block {
     Block left
     Block right
 }
