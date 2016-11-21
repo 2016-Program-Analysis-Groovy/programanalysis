@@ -31,7 +31,7 @@ class ReachingDefinitions {
             }
         }
 
-        String workListToString = workList.join('\n')
+        String workListToString = 'worklist:\n\n' + workList.join('\n')
         log.info workListToString
 
         while (!workList.empty) {

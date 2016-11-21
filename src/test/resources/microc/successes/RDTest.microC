@@ -1,0 +1,17 @@
+{
+int x;
+int y;
+int z;
+read x;
+read y;
+if(x < y) {
+	x = 2;
+	y = 3;
+}
+else {
+	y = 2;
+	x = 3;
+}
+z = x + y;
+write z;
+}

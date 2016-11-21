@@ -1,0 +1,23 @@
+/*Reaching Definitions: Does your solution detect that for the while instructions the variables may or may not have been overwritten inside the while loops?
+This program is also good for testing the construction of your flow graph.*/
+
+{
+	int a; 
+	int b; 
+	int c;
+	while (a > 30) {
+		a = a+1;
+		while (b > 15) {
+			b = b+1;			
+			if (a == 5) {
+				break;
+			}
+			c = c + 3;
+		}
+		a = a+2;
+		if (b == 10) {
+			break;
+		}
+	}
+	a = b + c;
+}
