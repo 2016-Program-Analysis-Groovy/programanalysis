@@ -65,7 +65,7 @@ class MicroCWalker extends MicroCBaseListener {
         ReachingDefinitions rdAnalysis = new ReachingDefinitions()
         Map rdAnalysisWithFifoResult = rdAnalysis.rdAnalysisWithFIFO(program)
         String output
-        output = rdAnalysisWithFifoResult.collect { key, value ->
+        output = 'Result of RD Analysis by Block Label: \n\n' + rdAnalysisWithFifoResult.collect { key, value ->
             '\nkey: ' + key + '     ' + value.toString()
         }
         log.info output
@@ -84,7 +84,7 @@ class MicroCWalker extends MicroCBaseListener {
             // case: final(s)
             Block whileBlock = findParentOfType(block, While)
             if (whileBlock) {
-                whileBlock.breakTo = 'l' + labelCounter
+                whileBlock.breakTo = 'L' + labelCounter
                 if (block.class != Break) {
                     block.outputs << whileBlock.label
                 } else {
@@ -146,7 +146,12 @@ class MicroCWalker extends MicroCBaseListener {
         Assignment a = new Assignment()
         a = init(a)
         a.variableAssigned = ctx.identifier().text
-        a.statement = a.variableAssigned + ' = ' + ctx.expr().text.first()
+        a.statement = a.variableAssigned
+        if (ctx.expr().size() > 2) {
+            a.statement += '[' + ctx.expr().first() + '] = ' + ctx.expr().tail().join(' ')
+        } else {
+            a.statement += ' = ' + ctx.expr()?.getAt(0)
+        }
         return a
     }
 
@@ -230,7 +235,7 @@ class MicroCWalker extends MicroCBaseListener {
 
     @SuppressWarnings('NoDef')
     def init(b) {
-        b.label = "l$labelCounter"
+        b.label = "L$labelCounter"
         if (labelCounter == 1) {
             b.isInitialBlock = true
         }

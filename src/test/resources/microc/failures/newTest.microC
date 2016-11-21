@@ -1,0 +1,22 @@
+{
+ int x;
+ int y;
+ int i;
+ int n;
+ int z;
+ x = 0;
+ y = 0;
+ i = 0;
+ int A[n];
+ while (i < n) {
+    if (A[i] >= 0) {
+       x = x + A[i];
+       i = i + 1;
+    } else {
+        i = i + 1;
+        continue;
+    }
+    y = y + 1;
+ }
+ z = x/y;
+}
