@@ -34,6 +34,7 @@ import programanalysis.blocktypes.Multiplication
 import programanalysis.blocktypes.OPR
 import programanalysis.blocktypes.OR
 import programanalysis.blocktypes.Read
+import programanalysis.blocktypes.SubBlock
 import programanalysis.blocktypes.Subtraction
 import programanalysis.blocktypes.While
 import programanalysis.blocktypes.Write
@@ -164,7 +165,7 @@ class MicroCWalker extends MicroCBaseListener {
         a = init(a)
         a.variableAssigned = visit(ctx.identifier())
         a.statement = ctx.text
-        a.variablesUsed = visit(ctx.expr()) as List
+        a.variablesUsed = ctx.expr().collect { visit(it) }
         return a
     }
 
@@ -182,7 +183,7 @@ class MicroCWalker extends MicroCBaseListener {
         r.statement = 'read: ' +
                 (ctx.expr()?.text ? ctx.identifier().text + '[' + ctx.expr().text + ']' : ctx.identifier().text)
         r.variableAssigned = visit(ctx.identifier())
-        r.variablesUsed = visit(ctx.expr()) as List
+        r.variablesUsed = [visit(ctx.expr())]
         return r
     }
 
@@ -247,14 +248,16 @@ class MicroCWalker extends MicroCBaseListener {
         return null
     }
 
-    @SuppressWarnings('NoDef')
+    @SuppressWarnings(['NoDef', 'Instanceof'])
     def init(b) {
         b.label = "L$labelCounter"
         if (labelCounter == 1) {
             b.isInitialBlock = true
         }
         labelCounter++
-        program << b
+        if (!(b instanceof SubBlock)) {
+            program << b
+        }
         return b
     }
 
