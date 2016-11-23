@@ -16,7 +16,7 @@ class ReachingDefinitions {
             addEdgesToEndOfWorkList(block)
             if (block.variableAssigned) {
                 List<Tuple> influencedBlocks = rdKill.values().find {
-                    it.findAll { it.first() == block.variableAssigned }
+                    it.findAll { it.first() == block.variableAssigned.statement }
                 }
                 influencedBlocks.each { Tuple blockTuple ->
                     String variable = blockTuple.first()
@@ -24,10 +24,10 @@ class ReachingDefinitions {
                     rdKill[influencedBlockLabel] = rdKill[influencedBlockLabel] + [new Tuple(variable, block.label)]
                 }
                 rdKill[block.label] = influencedBlocks ?
-                        influencedBlocks + [new Tuple(block.variableAssigned, block.label)] :
-                        [new Tuple(block.variableAssigned, block.label)]
+                        influencedBlocks + [new Tuple(block.variableAssigned.statement, block.label)] :
+                        [new Tuple(block.variableAssigned.statement, block.label)]
 
-                rdGen[block.label] = [new Tuple(block.variableAssigned, block.label)]
+                rdGen[block.label] = [new Tuple(block.variableAssigned.statement, block.label)]
             }
         }
 
