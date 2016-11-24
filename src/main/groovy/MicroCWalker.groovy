@@ -27,11 +27,16 @@ import programanalysis.blocktypes.Break
 import programanalysis.blocktypes.Continue
 import programanalysis.blocktypes.Declaration
 import programanalysis.blocktypes.Division
+import programanalysis.blocktypes.Equal
+import programanalysis.blocktypes.GreaterThan
+import programanalysis.blocktypes.GreaterThanEqual
 import programanalysis.blocktypes.Identifier
 import programanalysis.blocktypes.If
 import programanalysis.blocktypes.IntegerBlock
+import programanalysis.blocktypes.LessThan
+import programanalysis.blocktypes.LessThanEqual
 import programanalysis.blocktypes.Multiplication
-import programanalysis.blocktypes.OPR
+import programanalysis.blocktypes.NotEqual
 import programanalysis.blocktypes.OR
 import programanalysis.blocktypes.Read
 import programanalysis.blocktypes.SubBlock
@@ -147,6 +152,7 @@ class MicroCWalker extends MicroCBaseListener {
         b.variableType = ctx.type().text
         b.variableAssigned = visit(ctx.identifier())
         b.statement = "$b.variableType $b.variableAssigned"
+        b.variablesUsed = ['0']
         return b
     }
 
@@ -298,6 +304,7 @@ class MicroCWalker extends MicroCBaseListener {
                 return addition
             }
             Subtraction subtraction = new Subtraction()
+            init(subtraction)
             subtraction.left = visit(aexprContext.getChild(0))
             subtraction.right = visit(aexprContext.getChild(2))
             return subtraction
@@ -317,12 +324,37 @@ class MicroCWalker extends MicroCBaseListener {
 
     Block visit(Bexpr2Context bexpr2Context) {
         if (bexpr2Context.childCount > 1) {
-            OPR opr = new OPR()
-            init(opr)
-            opr.operand = bexpr2Context.getChild(1).text
-            opr.left = bexpr2Context.getChild(0)
-            opr.right = bexpr2Context.getChild(2)
-            return opr
+            String operator = bexpr2Context.getChild(1)
+            if (operator == '>') {
+                GreaterThan op = new GreaterThan()
+                op.left = bexpr2Context.getChild(0)
+                op.right = bexpr2Context.getChild(2)
+                return op
+            } else if (operator == '>=') {
+                GreaterThanEqual op = new GreaterThanEqual()
+                op.left = bexpr2Context.getChild(0)
+                op.right = bexpr2Context.getChild(2)
+                return op
+            } else if (operator == '<') {
+                LessThan op = new LessThan()
+                op.left = bexpr2Context.getChild(0)
+                op.right = bexpr2Context.getChild(2)
+                return op
+            } else if (operator == '<=') {
+                LessThanEqual op = new LessThanEqual()
+                op.left = bexpr2Context.getChild(0)
+                op.right = bexpr2Context.getChild(2)
+                return op
+            } else if (operator == '==') {
+                Equal op = new Equal()
+                op.left = bexpr2Context.getChild(0)
+                op.right = bexpr2Context.getChild(2)
+                return op
+            }
+            NotEqual op = new NotEqual()
+            op.left = bexpr2Context.getChild(0)
+            op.right = bexpr2Context.getChild(2)
+            return op
         }
         return visit(bexpr2Context.getChild(0))
     }
