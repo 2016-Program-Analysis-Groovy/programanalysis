@@ -19,6 +19,7 @@ import groovy.util.logging.Slf4j
 import org.antlr.v4.runtime.tree.TerminalNode
 import org.antlr.v4.runtime.tree.TerminalNodeImpl
 import programanalysis.Block
+import programanalysis.DetectionOfSigns
 import programanalysis.ReachingDefinitions
 import programanalysis.blocktypes.Addition
 import programanalysis.blocktypes.And
@@ -92,6 +93,14 @@ class MicroCWalker extends MicroCBaseListener {
             '\nkey: ' + key + '     ' + value.toString()
         }
         log.info output
+
+        String dsOutput
+        DetectionOfSigns dsAnalysis = new DetectionOfSigns()
+        Map dsAnalysisWithFifoResult = dsAnalysis.dsAnalysisWithFIFO(program)
+        dsOutput = 'Result of DS Analysis by Block Label: \n\n' + dsAnalysisWithFifoResult.collect { key, value ->
+            '\nkey: ' + key + '     ' + value.toString()
+        }
+        log.info dsOutput
     }
 
     void visitListOfBlocks(Block block, List contexts, Boolean isRootContext = false,
@@ -152,7 +161,11 @@ class MicroCWalker extends MicroCBaseListener {
         b.variableType = ctx.type().text
         b.variableAssigned = visit(ctx.identifier())
         b.statement = "$b.variableType $b.variableAssigned"
-        b.variablesUsed = ['0']
+
+        IntegerBlock block = new IntegerBlock()
+        init(block)
+        block.statement = 0
+        b.variablesUsed = [block]
         return b
     }
 

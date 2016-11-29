@@ -5,7 +5,7 @@ class Block {
     String statement
     List<String> inputs = []
     List<String> outputs = []
-    List<Block> variablesUsed = []
+    List<Block> variablesUsed
     Block variableAssigned
     Boolean isInitialBlock = false
     Boolean isTerminalBlock = false
