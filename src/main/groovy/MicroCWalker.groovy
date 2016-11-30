@@ -83,7 +83,7 @@ class MicroCWalker extends MicroCBaseListener {
             }
         }
 
-        log.info(program*.toString().join('\n'))
+//        log.info(program*.toString().join('\n'))
 
         // run analyses
         ReachingDefinitions rdAnalysis = new ReachingDefinitions()
