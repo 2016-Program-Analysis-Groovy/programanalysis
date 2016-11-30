@@ -43,6 +43,7 @@ class DetectionOfSigns {
             workList = workList.drop(1)
             String l = workListItem.first()
             String lPrime = workListItem.last()
+            log.info 'workListItem : ' + l + ', ' + lPrime
             calculateSolution(l)
             if (lPrime) {
                 if (dsExit[l] != dsEntries[lPrime]) {
@@ -55,13 +56,9 @@ class DetectionOfSigns {
                                     signsAtVariableLKey.value.add(it)
                                 }
                             }
-                        }
-
-                        // if the variable doesn't exist at all
-                        if (!signsAtVariableLKey) {
+                        } else {
                             dsEntries[lPrime].put(lKey, lValue)
                         }
-
                     }
                     Block lPrimeBlock = program.find { it.label == workListItem.last() }
                     addEdgesToEndOfWorkList(lPrimeBlock)
@@ -90,9 +87,9 @@ class DetectionOfSigns {
         dsExit[label] = dsEntries[label]
         if (!block.variableAssigned) {
             return
-        } else if (!block.variablesUsed) {
-            dsExit[label].put(block.variableAssigned.statement, defaultValues)
-            return
+//        } else if (block.variableAssigned && !block.variablesUsed) {
+//            dsExit[label].put(block.variableAssigned.statement, defaultValues)
+//            return
         }
         dsExit[label].put(block.variableAssigned.statement, dsAnalysis(label, block.variablesUsed))
     }

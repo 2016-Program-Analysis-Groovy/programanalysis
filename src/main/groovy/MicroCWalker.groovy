@@ -83,7 +83,7 @@ class MicroCWalker extends MicroCBaseListener {
             }
         }
 
-//        log.info(program*.toString().join('\n'))
+        log.info(program*.toString().join('\n'))
 
         // run analyses
         ReachingDefinitions rdAnalysis = new ReachingDefinitions()
@@ -171,7 +171,6 @@ class MicroCWalker extends MicroCBaseListener {
         b.statement = "$b.variableType $b.variableAssigned"
 
         IntegerBlock block = new IntegerBlock()
-        init(block)
         block.statement = 0
         b.variablesUsed = [block]
         return b
@@ -306,7 +305,6 @@ class MicroCWalker extends MicroCBaseListener {
     Block visit(ExprContext exprContext) {
         if (exprContext.childCount > 1) {
             OR or = new OR()
-            init(or)
             or.left = visit(exprContext.getChild(0))
             or.right = visit(exprContext.getChild(2))
             return or
@@ -319,13 +317,11 @@ class MicroCWalker extends MicroCBaseListener {
             String operator = aexprContext.getChild(1)
             if (operator == '+') {
                 Addition addition = new Addition()
-                init(addition)
                 addition.left = visit(aexprContext.getChild(0))
                 addition.right = visit(aexprContext.getChild(2))
                 return addition
             }
             Subtraction subtraction = new Subtraction()
-            init(subtraction)
             subtraction.left = visit(aexprContext.getChild(0))
             subtraction.right = visit(aexprContext.getChild(2))
             return subtraction
@@ -336,7 +332,6 @@ class MicroCWalker extends MicroCBaseListener {
     Block visit(Bexpr1Context bexpr1Context) {
         if (bexpr1Context.childCount > 1) {
             And and = new And()
-            init(and)
             and.left = visit(bexpr1Context.getChild(0))
             and.right = visit(bexpr1Context.getChild(1))
             return and
@@ -386,13 +381,11 @@ class MicroCWalker extends MicroCBaseListener {
             String operator = expr1Context.getChild(1)
             if (operator == '*') {
                 Multiplication multiplication = new Multiplication()
-                init(multiplication)
                 multiplication.left = visit(expr1Context.getChild(0))
                 multiplication.right = visit(expr1Context.getChild(2))
                 return multiplication
             }
             Division division = new Division()
-            init(division)
             division.left = visit(expr1Context.getChild(0))
             division.right = visit(expr1Context.getChild(2))
             return division
@@ -403,7 +396,6 @@ class MicroCWalker extends MicroCBaseListener {
     Block visit(Expr2Context expr2Context) {
         if (expr2Context.childCount > 1) {
             Assignment assignment = new Assignment()
-            init(assignment)
             assignment.left = visit(expr2Context.getChild(0))
             assignment.right = visit(expr2Context.getChild(2))
         }
@@ -412,14 +404,12 @@ class MicroCWalker extends MicroCBaseListener {
 
     Block visit(IntegerContext integerContext) {
         IntegerBlock block = new IntegerBlock()
-        init(block)
         block.statement = integerContext.text
         return block
     }
 
     Block visit(IdentifierContext identifierContext) {
         Identifier identifier = new Identifier()
-        init(identifier)
         identifier.statement = identifierContext.text
         return identifier
     }
