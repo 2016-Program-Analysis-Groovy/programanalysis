@@ -140,6 +140,8 @@ class MicroCWalker extends MicroCBaseListener {
             }
             childBlock.inputs.addAll(finalStatementBlocks*.label)
             block.breakTo = childBlock.label
+            block.outputs << childBlock.label
+            childBlock.inputs << block.label
         } else {
             block.outputs << childBlock.label
             childBlock.inputs << block.label
@@ -324,8 +326,9 @@ class MicroCWalker extends MicroCBaseListener {
         }
         return visit(aexprContext.getChild(0))
     }
+
     Block visit(Bexpr1Context bexpr1Context) {
-        if (bexpr1Context.childCount > 1 ) {
+        if (bexpr1Context.childCount > 1) {
             And and = new And()
             init(and)
             and.left = visit(bexpr1Context.getChild(0))
