@@ -87,9 +87,15 @@ class MicroCWalker extends MicroCBaseListener {
 
         // run analyses
         ReachingDefinitions rdAnalysis = new ReachingDefinitions()
-        Map rdAnalysisWithFifoResult = rdAnalysis.rdAnalysisWithFIFO(program)
+        Map rdAnalysisWithFifoResult = rdAnalysis.rdAnalysis(program, 'FIFO')
         String output
-        output = 'Result of RD Analysis by Block Label: \n\n' + rdAnalysisWithFifoResult.collect { key, value ->
+        output = 'Result of RD Analysis by Block Label(FIFO): \n\n' + rdAnalysisWithFifoResult.collect { key, value ->
+            '\nkey: ' + key + '     ' + value.toString()
+        }
+        log.info output
+
+        Map rdAnalysisWithRPOResult = rdAnalysis.rdAnalysis(program, 'RPO')
+        output = 'Result of RD Analysis by Block Label(RPO): \n\n' + rdAnalysisWithRPOResult.collect { key, value ->
             '\nkey: ' + key + '     ' + value.toString()
         }
         log.info output
