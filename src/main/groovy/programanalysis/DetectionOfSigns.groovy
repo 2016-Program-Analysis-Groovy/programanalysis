@@ -43,7 +43,9 @@ class DetectionOfSigns {
             workList = workList.drop(1)
             String l = workListItem.first()
             String lPrime = workListItem.last()
+
             log.info 'workListItem : ' + l + ', ' + lPrime
+
             calculateSolution(l)
             if (lPrime) {
                 if (dsExit[l] != dsEntries[lPrime]) {
