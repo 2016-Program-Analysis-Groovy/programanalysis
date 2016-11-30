@@ -27,6 +27,7 @@ class DetectionOfSigns {
     Set defaultValues = ['+', '-', '0']
     List<Block> program
 
+    @SuppressWarnings(['NoDef', 'NestedBlockDepth'])
     Map<String, List<Tuple>> dsAnalysisWithFIFO(List<Block> program) {
         this.program = program
         program.each { Block block ->
@@ -46,9 +47,21 @@ class DetectionOfSigns {
             if (lPrime) {
                 if (dsExit[l] != dsEntries[lPrime]) {
                     dsExit[l].each { lKey, lValue ->
-                        if (!dsEntries[lPrime].find { it.key == lKey && it.value == lValue }) {
+                        // if the variable exists but doesn't contain the new value(s)
+                        def signsAtVariableLKey = dsEntries[lPrime].find { it.key == lKey }
+                        if (signsAtVariableLKey) {
+                            lValue.each {
+                                if (!(it in signsAtVariableLKey.value)) {
+                                    signsAtVariableLKey.value.add(it)
+                                }
+                            }
+                        }
+
+                        // if the variable doesn't exist at all
+                        if (!signsAtVariableLKey) {
                             dsEntries[lPrime].put(lKey, lValue)
                         }
+
                     }
                     Block lPrimeBlock = program.find { it.label == workListItem.last() }
                     addEdgesToEndOfWorkList(lPrimeBlock)
@@ -87,6 +100,12 @@ class DetectionOfSigns {
     @SuppressWarnings('NoDef')
     Set dsAnalysis(String l, List<Block> variablesUsed) {
         Set results = [] as Set
+
+        //for reads where there are no values to determine what is assigned
+        if (!variablesUsed) {
+            return defaultValues
+        }
+
         variablesUsed.each {
             def result = dsAnalysis(l, it)
             if (result) {
@@ -195,9 +214,8 @@ class DetectionOfSigns {
 
         if (right.contains('0')) {
             // division by zero is undefined
-            return defaultValues
+            return []
         }
-
         if (left.contains('0')) {
             resultSet << '0'
         }
