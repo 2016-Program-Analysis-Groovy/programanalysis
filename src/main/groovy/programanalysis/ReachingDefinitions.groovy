@@ -86,11 +86,11 @@ class ReachingDefinitions {
         }
     }
 
+    @SuppressWarnings('IfStatementCouldBeTernary')
     Boolean isWorklistDone(String algorithm) {
-       if(algorithm == 'FIFO' && currentWorkList.empty) {
+       if (algorithm == 'FIFO' && currentWorkList.empty) {
                     return true
-        }
-        if(algorithm == 'RPO' && currentWorkList.empty && pendingWorkList.empty) {
+        } else if (algorithm == 'RPO' && currentWorkList.empty && pendingWorkList.empty) {
             return true
         }
         return false
