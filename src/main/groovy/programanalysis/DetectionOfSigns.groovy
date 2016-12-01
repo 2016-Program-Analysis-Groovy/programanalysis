@@ -3,6 +3,7 @@ package programanalysis
 import groovy.util.logging.Slf4j
 import programanalysis.blocktypes.Addition
 import programanalysis.blocktypes.And
+import programanalysis.blocktypes.ArrayIdentifier
 import programanalysis.blocktypes.Division
 import programanalysis.blocktypes.Equal
 import programanalysis.blocktypes.GreaterThan
@@ -86,10 +87,10 @@ class DetectionOfSigns {
             log.error "Block: $label not found!!!"
             return
         }
-        //dsExit[label] = dsEntries[label] <<< Don't do this! 
+        //dsExit[label] = dsEntries[label] <<< Don't do this!
         dsExit[label] = [:]
-        Set valueSet = [] as Set
         dsEntries[label].keySet().each { key ->
+            Set valueSet = [] as Set
             dsEntries[label][key].each { value ->
                 valueSet.add(value)
             }
@@ -98,11 +99,17 @@ class DetectionOfSigns {
 
         if (!block.variableAssigned) {
             return
-//        } else if (block.variableAssigned && !block.variablesUsed) {
-//            dsExit[label].put(block.variableAssigned.statement, defaultValues)
-//            return
         }
-        dsExit[label].put(block.variableAssigned.statement, dsAnalysis(label, block.variablesUsed))
+        if (block.variableAssigned.class == Identifier || !dsExit[label]?.getAt(block.variableAssigned.statement)) {
+            dsExit[label].put(block.variableAssigned.statement, dsAnalysis(label, block.variablesUsed))
+        } else {
+            Set result = dsAnalysis(label, block.variablesUsed)
+            if (result) {
+                dsExit[label][block.variableAssigned.statement].addAll(result)
+            } else {
+                dsExit[label].put(block.variableAssigned.statement, result)
+            }
+        }
     }
 
     @SuppressWarnings('NoDef')
@@ -138,6 +145,13 @@ class DetectionOfSigns {
     @SuppressWarnings('UnusedMethodParameter')
     Set dsAnalysis(String l, Identifier identifier) {
         return dsEntries[l]?.get(identifier.statement) ?: defaultValues
+    }
+
+    Set dsAnalysis(String l, ArrayIdentifier arrayIdentifier) {
+        if (dsAnalysis(l, arrayIdentifier.index).contains('-')) {
+            return []
+        }
+        return dsAnalysis(l, arrayIdentifier.identifier)
     }
 
     @SuppressWarnings(['UnusedMethodParameter', 'UnnecessaryGString'])

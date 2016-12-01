@@ -1,0 +1,9 @@
+{
+    int x;
+    int a[2];
+    x = -3;
+    a[x] = a[x];
+    if (x == a[x]) {
+        write x;
+    }
+}
