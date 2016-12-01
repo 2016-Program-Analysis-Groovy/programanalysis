@@ -28,8 +28,9 @@ class DetectionOfSigns {
     Map<String, Map<String, Set>> dsExit = [:]
     Set defaultValues = ['+', '-', '0']
     List<Block> program
+    int counter
 
-    List algorithms = ['FIFO', 'RPO']
+    List algorithms = ['FIFO', 'RPO', 'LIFO']
 
     @SuppressWarnings(['NoDef', 'NestedBlockDepth'])
     Map<String, List<Tuple>> runDsAnalysis(List<Block> program, String wlAlgorithm) {
@@ -46,16 +47,13 @@ class DetectionOfSigns {
             addEdgesToEndOfWorkList(block, wlAlgorithm)
         }
 
-//        String currentWorkListToString = 'current worklist:\n\n' + currentWorkList.join('\n')
-//        String pendingWorkListToString = 'pending worklist:\n\n' + pendingWorkList.join('\n')
-//        log.info currentWorkListToString
-//        log.info pendingWorkListToString
-
+        counter = 0
         while (!isWorklistDone(wlAlgorithm)) {
             Tuple workListItem = extractFromWorklist(wlAlgorithm)
             String l = workListItem.first()
             String lPrime = workListItem.last()
 
+            counter++
 //            log.info "worklist item: (" + l + "," + lPrime + ')'
 
             calculateSolution(l)
@@ -80,6 +78,8 @@ class DetectionOfSigns {
             }
         }
 
+        log.info 'Number of iterations through the worklist: ' + counter
+
         //to calculate exit of last block
         calculateSolution(program.last().label)
 
@@ -94,6 +94,10 @@ class DetectionOfSigns {
         } else if (algorithm == 'RPO') {
             block.outputs.each {
                 pendingWorkList << new Tuple(block.label, it)
+            }
+        } else if (algorithm == 'LIFO') {
+            block.outputs.each {
+                currentWorkList.add(0, new Tuple(block.label, it))
             }
         }
     }
@@ -131,7 +135,7 @@ class DetectionOfSigns {
 
     @SuppressWarnings('IfStatementCouldBeTernary')
     private Boolean isWorklistDone(String algorithm) {
-        if (algorithm == 'FIFO' && currentWorkList.empty) {
+        if (algorithm in ['FIFO', 'LIFO'] && currentWorkList.empty) {
             return true
         } else if (algorithm == 'RPO' && currentWorkList.empty && pendingWorkList.empty) {
             return true
@@ -141,6 +145,7 @@ class DetectionOfSigns {
 
     private Tuple extractFromWorklist(String algorithm) {
         switch (algorithm) {
+            case 'LIFO':
             case 'FIFO':
                 return extractFromFIFO()
             case 'RPO':
@@ -212,7 +217,7 @@ class DetectionOfSigns {
         return dsEntries[l]?.get(identifier.statement) ?: defaultValues
     }
 
-    Set dsAnalysis(String l, ArrayIdentifier arrayIdentifier) {
+    private Set dsAnalysis(String l, ArrayIdentifier arrayIdentifier) {
         if (dsAnalysis(l, arrayIdentifier.index).contains('-')) {
             return []
         }

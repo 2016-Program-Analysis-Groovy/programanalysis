@@ -1,3 +1,4 @@
+/* Simple countdown program, used as the example program in the report*/
 {
     int x;
     x = 10;

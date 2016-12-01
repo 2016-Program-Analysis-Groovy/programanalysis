@@ -10,8 +10,9 @@ class ReachingDefinitions {
     Map rdExit = [:]
     Map<String, List<Tuple>> rdKill = [:]
     Map<String, Tuple> rdGen = [:]
+    int counter = 0
 
-    List algorithms = ['FIFO', 'RPO']
+    List algorithms = ['FIFO', 'RPO', 'LIFO']
 
     Map<String, List<Tuple>> rdAnalysis(List<Block> program, String wlAlgorithm) {
         if (!(wlAlgorithm in algorithms)) {
@@ -40,16 +41,18 @@ class ReachingDefinitions {
             }
         }
 
-//        String currentWorkListToString = 'current worklist:\n\n' + currentWorkList.join('\n')
-//        String pendingWorkListToString = 'pending worklist:\n\n' + pendingWorkList.join('\n')
-//        log.info currentWorkListToString
-//        log.info pendingWorkListToString
+//        if (wlAlgorithm == 'FIFO') {
+//            Collections.shuffle(currentWorkList)
+//        }
 
+        counter = 0
+        String workListOutput =''
         while (!isWorklistDone(wlAlgorithm)) {
             Tuple workListItem = extractFromWorklist(wlAlgorithm)
             String l = workListItem.first()
             String lPrime = workListItem.last()
-            log.info 'worklist item: (' + l + ',' + lPrime + ')'
+            workListOutput += 'worklist item: (' + l + ',' + lPrime + ')\n'
+            counter++
             calculateSolution(l)
             if (lPrime) {
                 if (rdExit[l].any { !(it in rdEntries[lPrime]) }) {
@@ -60,6 +63,7 @@ class ReachingDefinitions {
                 }
             }
         }
+        log.info workListOutput + '\nTotal count: ' + counter
 
         //to calculate exit of last block
         calculateSolution(new Tuple(program.last().label) )
@@ -76,6 +80,10 @@ class ReachingDefinitions {
             block.outputs.each {
                 pendingWorkList << new Tuple(block.label, it)
             }
+        } else if (algorithm == 'LIFO') {
+            block.outputs.each {
+                currentWorkList.add(0, new Tuple(block.label, it))
+            }
         }
     }
 
@@ -84,11 +92,12 @@ class ReachingDefinitions {
         if (rdGen[l]) {
             rdExit[l] = rdExit[l] + rdGen[l]
         }
+        rdExit[l].sort { a, b -> a.first() <=> b.first() ?: a.last() <=> b.last() }
     }
 
     @SuppressWarnings('IfStatementCouldBeTernary')
     private Boolean isWorklistDone(String algorithm) {
-       if (algorithm == 'FIFO' && currentWorkList.empty) {
+       if (algorithm in ['FIFO', 'LIFO'] && currentWorkList.empty) {
                     return true
         } else if (algorithm == 'RPO' && currentWorkList.empty && pendingWorkList.empty) {
             return true
@@ -98,6 +107,7 @@ class ReachingDefinitions {
 
     private Tuple extractFromWorklist(String algorithm) {
         switch (algorithm) {
+            case 'LIFO':
             case 'FIFO':
                 return extractFromFIFO()
             case 'RPO':
@@ -130,7 +140,14 @@ class ReachingDefinitions {
         pendingWorkList = []
     }
 
+    @SuppressWarnings('SpaceAroundOperator')
     private List sortByRPO(List list) {
-        list.sort { Tuple a, Tuple b -> a.last() <=> b.first() ?: a.first() <=> b.last() }
+        list.sort {
+            Tuple a, Tuple b -> extractCounterFromBlockLabel(a.first()) <=> extractCounterFromBlockLabel(b.first()) ?:
+                extractCounterFromBlockLabel(a.first()) <=> extractCounterFromBlockLabel(b.last()) }
+    }
+
+    private Integer extractCounterFromBlockLabel(String label) {
+        label[1..label.size() - 1].toInteger()
     }
 }

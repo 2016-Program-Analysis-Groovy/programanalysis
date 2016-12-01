@@ -1,4 +1,5 @@
 /*Reaching Definitions: Does your solution discover that for the while program point the assignments inside the while loop may or may not have overwritten the ones outside the while loop?*/
+/* Fabian Goerge */
 {
 	int a[10];
 	int b; 

@@ -1,3 +1,4 @@
+/* Testing that the flow works correctly in if with no else */
 {
     int i;
     i = 1;

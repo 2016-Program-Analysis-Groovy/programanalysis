@@ -1,6 +1,6 @@
 /* This program will test conditionals in interval analysis. Will the analysis determine that at the end of the program
 y ∈ [-1, 2] if the lattice size is 5? Will it determine y ∈ [-1, ∞) if a lattice size of 3? */
-
+/* Courtesy of Harmen Martijn Bastiaan */
 {
     int y;
     read y;

@@ -1,4 +1,5 @@
 /* For live variable analysis. Is there a label where all three variables are live? */
+/* Courtesy of Frederik Højholt Andersen */
 {
     int x; int y; int z;
     

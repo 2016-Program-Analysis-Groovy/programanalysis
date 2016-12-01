@@ -1,4 +1,4 @@
-/* does the analysis module construct the correct flow/program graphs for nested while loops? */
+/* Does the analysis module construct the correct flow/program graphs for nested while loops? */
 {
     int x;
     x = 100;

@@ -1,3 +1,4 @@
+/* Testing that the flow links correctly from a break */
 {
   int i;
   i = 5;
