@@ -87,7 +87,7 @@ class MicroCWalker extends MicroCBaseListener {
             }
         }
 
-        log.info(program*.toString().join('\n'))
+     //   log.info(program*.toString().join('\n'))
 
         // run analyses
         ReachingDefinitions rdAnalysis = new ReachingDefinitions()
@@ -104,6 +104,12 @@ class MicroCWalker extends MicroCBaseListener {
         }
         log.info output
 
+        Map rdAnalysisWithLifoResult = rdAnalysis.rdAnalysis(program, 'LIFO')
+        output = 'Result of RD Analysis by Block Label(LIFO): \n\n' + rdAnalysisWithLifoResult.collect { key, value ->
+            '\nkey: ' + key + '     ' + value.toString()
+        }
+        log.info output
+
         String dsOutput
         DetectionOfSigns dsAnalysis = new DetectionOfSigns()
         Map dsAnalysisWithFifoResult = dsAnalysis.runDsAnalysis(program, 'FIFO')
@@ -114,6 +120,12 @@ class MicroCWalker extends MicroCBaseListener {
 
         Map dsAnalysisWithRPOResult = dsAnalysis.runDsAnalysis(program, 'RPO')
         dsOutput = 'Result of DS Analysis by Block Label(RPO): \n\n' + dsAnalysisWithRPOResult.collect { key, value ->
+            '\nkey: ' + key + '     ' + value.toString()
+        }
+        log.info dsOutput
+
+        Map dsAnalysisWithLIFOResult = dsAnalysis.runDsAnalysis(program, 'LIFO')
+        dsOutput = 'Result of DS Analysis by Block Label(LIFO): \n\n' + dsAnalysisWithLIFOResult.collect { key, value ->
             '\nkey: ' + key + '     ' + value.toString()
         }
         log.info dsOutput

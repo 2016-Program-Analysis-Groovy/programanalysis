@@ -1,5 +1,6 @@
 /*Reaching Definitions: Does your solution detect that for the while instructions the variables may or may not have been overwritten inside the while loops?
 This program is also good for testing the construction of your flow graph.*/
+/* Fabian Goerge */
 
 {
 	int a; 

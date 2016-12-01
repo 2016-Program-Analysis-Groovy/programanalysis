@@ -1,9 +1,8 @@
-{
- int x;
- int y;
- int i;
- int n;
- int z;
+/* This program, courtesy of Hanne Riis Nielson, was proposed as an intresting example of array handling */
+/* However, the ANTLR parser was unable to contruct a parse tree. Instead, we used */
+/* testOfReadingToArraysAndBreakingFromWhileLoops and testOfReadingToArraysAndContinuingInWhileLoop*/
+{ int x; int y; int i; int n; int z;
+
  x = 0;
  y = 0;
  i = 0;
@@ -19,4 +18,5 @@
     y = y + 1;
  }
  z = x/y;
+
 }

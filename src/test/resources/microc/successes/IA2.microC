@@ -1,6 +1,6 @@
 /* This very simple program will read a number from the standard input and use some (contrived) way to make sure the
 variable is not set to zero when the execution reaches the write statement. Will the analysis reflect this? */
-
+/* Courtesy of Harmen Martijn Bastiaan */
 {
     int x;
     read x;

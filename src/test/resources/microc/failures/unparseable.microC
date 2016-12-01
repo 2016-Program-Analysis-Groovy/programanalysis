@@ -1,3 +1,4 @@
+/* Unparsable program, testing exception handling */
 {
     x;
 }

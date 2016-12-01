@@ -1,3 +1,4 @@
+/* Testing array handling with negative index. Currently not working as intended in detection of signs analysis */
 {
     int x;
     int a[2];
