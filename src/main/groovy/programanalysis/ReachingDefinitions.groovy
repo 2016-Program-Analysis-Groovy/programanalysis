@@ -79,7 +79,7 @@ class ReachingDefinitions {
         }
     }
 
-    void calculateSolution(String l) {
+    private void calculateSolution(String l) {
         rdExit[l] = (rdEntries[l] - rdKill[l])
         if (rdGen[l]) {
             rdExit[l] = rdExit[l] + rdGen[l]
@@ -87,7 +87,7 @@ class ReachingDefinitions {
     }
 
     @SuppressWarnings('IfStatementCouldBeTernary')
-    Boolean isWorklistDone(String algorithm) {
+    private Boolean isWorklistDone(String algorithm) {
        if (algorithm == 'FIFO' && currentWorkList.empty) {
                     return true
         } else if (algorithm == 'RPO' && currentWorkList.empty && pendingWorkList.empty) {
@@ -96,7 +96,7 @@ class ReachingDefinitions {
         return false
     }
 
-    Tuple extractFromWorklist(String algorithm) {
+    private Tuple extractFromWorklist(String algorithm) {
         switch (algorithm) {
             case 'FIFO':
                 return extractFromFIFO()
@@ -106,13 +106,13 @@ class ReachingDefinitions {
         return null
     }
 
-    Tuple extractFromFIFO() {
+    private Tuple extractFromFIFO() {
         Tuple workListItem = currentWorkList.first()
         currentWorkList = currentWorkList.drop(1)
         return workListItem
     }
 
-    Tuple extractFromRPO() {
+    private Tuple extractFromRPO() {
         Tuple workListItem
         if (currentWorkList) {
             workListItem = currentWorkList.first()
@@ -125,12 +125,12 @@ class ReachingDefinitions {
         return workListItem
     }
 
-    void promoteWorklist() {
+    private void promoteWorklist() {
         currentWorkList = sortByRPO(pendingWorkList)
         pendingWorkList = []
     }
 
-    List sortByRPO(List list) {
+    private List sortByRPO(List list) {
         list.sort { Tuple a, Tuple b -> a.last() <=> b.first() ?: a.first() <=> b.last() }
     }
 }

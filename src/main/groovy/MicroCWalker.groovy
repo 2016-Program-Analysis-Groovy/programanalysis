@@ -102,8 +102,14 @@ class MicroCWalker extends MicroCBaseListener {
 
         String dsOutput
         DetectionOfSigns dsAnalysis = new DetectionOfSigns()
-        Map dsAnalysisWithFifoResult = dsAnalysis.dsAnalysisWithFIFO(program)
-        dsOutput = 'Result of DS Analysis by Block Label: \n\n' + dsAnalysisWithFifoResult.collect { key, value ->
+        Map dsAnalysisWithFifoResult = dsAnalysis.runDsAnalysis(program, 'FIFO')
+        dsOutput = 'Result of DS Analysis by Block Label(FIFO): \n\n' + dsAnalysisWithFifoResult.collect { key, value ->
+            '\nkey: ' + key + '     ' + value.toString()
+        }
+        log.info dsOutput
+
+        Map dsAnalysisWithRPOResult = dsAnalysis.runDsAnalysis(program, 'RPO')
+        dsOutput = 'Result of DS Analysis by Block Label(RPO): \n\n' + dsAnalysisWithRPOResult.collect { key, value ->
             '\nkey: ' + key + '     ' + value.toString()
         }
         log.info dsOutput
