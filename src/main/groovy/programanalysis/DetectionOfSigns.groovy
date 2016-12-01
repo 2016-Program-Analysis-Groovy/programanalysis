@@ -21,30 +21,41 @@ import programanalysis.blocktypes.Subtraction
 @Slf4j
 class DetectionOfSigns {
 
-    List<Tuple> workList = []
+    List<Tuple> currentWorkList
+    List<Tuple> pendingWorkList
     Map<String, Map<String, Set>> dsEntries = [:]
     Map<String, Map<String, Set>> dsExit = [:]
     Set defaultValues = ['+', '-', '0']
     List<Block> program
 
+    List algorithms = ['FIFO', 'RPO']
+
     @SuppressWarnings(['NoDef', 'NestedBlockDepth'])
-    Map<String, List<Tuple>> dsAnalysisWithFIFO(List<Block> program) {
+    Map<String, List<Tuple>> runDsAnalysis(List<Block> program, String wlAlgorithm) {
+        if (!(wlAlgorithm in algorithms)) {
+            log.error 'work list algorithm: ' + wlAlgorithm + ' is not supported'
+            return [:]
+        }
+
+        currentWorkList = []
+        pendingWorkList = []
         this.program = program
         program.each { Block block ->
             dsEntries[block.label] = [:]
-            addEdgesToEndOfWorkList(block)
+            addEdgesToEndOfWorkList(block, wlAlgorithm)
         }
 
-        String workListToString = 'worklist:\n\n' + workList.join('\n')
-        log.info workListToString
+//        String currentWorkListToString = 'current worklist:\n\n' + currentWorkList.join('\n')
+//        String pendingWorkListToString = 'pending worklist:\n\n' + pendingWorkList.join('\n')
+//        log.info currentWorkListToString
+//        log.info pendingWorkListToString
 
-        while (!workList.empty) {
-            Tuple workListItem = workList.first()
-            workList = workList.drop(1)
+        while (!isWorklistDone(wlAlgorithm)) {
+            Tuple workListItem = extractFromWorklist(wlAlgorithm)
             String l = workListItem.first()
             String lPrime = workListItem.last()
 
-            log.info 'workListItem : ' + l + ', ' + lPrime
+//            log.info "worklist item: (" + l + "," + lPrime + ')'
 
             calculateSolution(l)
             if (lPrime) {
@@ -63,7 +74,7 @@ class DetectionOfSigns {
                         }
                     }
                     Block lPrimeBlock = program.find { it.label == workListItem.last() }
-                    addEdgesToEndOfWorkList(lPrimeBlock)
+                    addEdgesToEndOfWorkList(lPrimeBlock, wlAlgorithm)
                 }
             }
         }
@@ -74,19 +85,25 @@ class DetectionOfSigns {
         return dsExit
     }
 
-    private addEdgesToEndOfWorkList(Block block) {
-        block.outputs.each {
-            workList << new Tuple(block.label, it)
+    private addEdgesToEndOfWorkList(Block block, String algorithm) {
+        if (algorithm == 'FIFO') {
+            block.outputs.each {
+                currentWorkList << new Tuple(block.label, it)
+            }
+        } else if (algorithm == 'RPO') {
+            block.outputs.each {
+                pendingWorkList << new Tuple(block.label, it)
+            }
         }
     }
 
-    void calculateSolution(String label) {
+    private void calculateSolution(String label) {
         Block block = program.find { it.label == label }
         if (!block) {
             log.error "Block: $label not found!!!"
             return
         }
-        //dsExit[label] = dsEntries[label] <<< Don't do this! 
+        //dsExit[label] = dsEntries[label] <<< Don't do this!
         dsExit[label] = [:]
         Set valueSet = [] as Set
         dsEntries[label].keySet().each { key ->
@@ -98,15 +115,60 @@ class DetectionOfSigns {
 
         if (!block.variableAssigned) {
             return
-//        } else if (block.variableAssigned && !block.variablesUsed) {
-//            dsExit[label].put(block.variableAssigned.statement, defaultValues)
-//            return
         }
         dsExit[label].put(block.variableAssigned.statement, dsAnalysis(label, block.variablesUsed))
     }
 
+    @SuppressWarnings('IfStatementCouldBeTernary')
+    private Boolean isWorklistDone(String algorithm) {
+        if (algorithm == 'FIFO' && currentWorkList.empty) {
+            return true
+        } else if (algorithm == 'RPO' && currentWorkList.empty && pendingWorkList.empty) {
+            return true
+        }
+        return false
+    }
+
+    private Tuple extractFromWorklist(String algorithm) {
+        switch (algorithm) {
+            case 'FIFO':
+                return extractFromFIFO()
+            case 'RPO':
+                return extractFromRPO()
+        }
+        return null
+    }
+
+    private Tuple extractFromFIFO() {
+        Tuple workListItem = currentWorkList.first()
+        currentWorkList = currentWorkList.drop(1)
+        return workListItem
+    }
+
+    private Tuple extractFromRPO() {
+        Tuple workListItem
+        if (currentWorkList) {
+            workListItem = currentWorkList.first()
+            currentWorkList = currentWorkList.drop(1)
+        } else {
+            promoteWorklist()
+            workListItem = currentWorkList.first()
+            currentWorkList = currentWorkList.drop(1)
+        }
+        return workListItem
+    }
+
+    private void promoteWorklist() {
+        currentWorkList = sortByRPO(pendingWorkList)
+        pendingWorkList = []
+    }
+
+    private List sortByRPO(List list) {
+        list.sort { Tuple a, Tuple b -> a.last() <=> b.first() ?: a.first() <=> b.last() }
+    }
+
     @SuppressWarnings('NoDef')
-    Set dsAnalysis(String l, List<Block> variablesUsed) {
+    private Set dsAnalysis(String l, List<Block> variablesUsed) {
         Set results = [] as Set
 
         //for reads where there are no values to determine what is assigned
@@ -123,8 +185,8 @@ class DetectionOfSigns {
         return results.flatten()
     }
 
-    @SuppressWarnings(['UnusedMethodParameter', 'UnnecessaryGString'])
-    Set dsAnalysis(String l, IntegerBlock integerBlock) {
+    @SuppressWarnings(['UnusedPrivateMethodParameter', 'UnnecessaryGString'])
+    private Set dsAnalysis(String l, IntegerBlock integerBlock) {
         switch (integerBlock.statement.toInteger()) {
             case 0 :
                 return ['0'] as Set
@@ -136,12 +198,12 @@ class DetectionOfSigns {
     }
 
     @SuppressWarnings('UnusedMethodParameter')
-    Set dsAnalysis(String l, Identifier identifier) {
+    private Set dsAnalysis(String l, Identifier identifier) {
         return dsEntries[l]?.get(identifier.statement) ?: defaultValues
     }
 
     @SuppressWarnings(['UnusedMethodParameter', 'UnnecessaryGString'])
-    Set dsAnalysis(String l, Addition addition) {
+    private Set dsAnalysis(String l, Addition addition) {
         Set left = dsAnalysis(l, addition.left)
         Set right = dsAnalysis(l, addition.right)
         Set resultSet = []
@@ -166,7 +228,7 @@ class DetectionOfSigns {
     }
 
     @SuppressWarnings(['UnusedMethodParameter', 'UnnecessaryGString'])
-    Set dsAnalysis(String l, Subtraction subtraction) {
+    private Set dsAnalysis(String l, Subtraction subtraction) {
         Set left = dsAnalysis(l, subtraction.left)
         Set right = dsAnalysis(l, subtraction.right)
         Set resultSet = []
@@ -190,7 +252,7 @@ class DetectionOfSigns {
     }
 
     @SuppressWarnings(['UnusedMethodParameter', 'UnnecessaryGString'])
-    Set dsAnalysis(String l, Multiplication multiplication) {
+    private Set dsAnalysis(String l, Multiplication multiplication) {
         Set left = dsAnalysis(l, multiplication.left)
         Set right = dsAnalysis(l, multiplication.right)
         Set resultSet = []
@@ -213,9 +275,7 @@ class DetectionOfSigns {
         return resultSet
     }
 
-    // Add ability to handle division by zero!
-    @SuppressWarnings(['UnusedMethodParameter', 'UnnecessaryGString'])
-    Set dsAnalysis(String l, Division division) {
+    private Set dsAnalysis(String l, Division division) {
         Set left = dsAnalysis(l, division.left)
         Set right = dsAnalysis(l, division.right)
         Set resultSet = []
@@ -243,7 +303,7 @@ class DetectionOfSigns {
     }
 
     @SuppressWarnings(['UnusedMethodParameter', 'UnnecessaryGString'])
-    Set dsAnalysis(String l, And and) {
+    private Set dsAnalysis(String l, And and) {
         Set left = dsAnalysis(l, and.left)
         Set right = dsAnalysis(l, and.right)
         Set resultSet = []
@@ -262,7 +322,7 @@ class DetectionOfSigns {
     }
 
     @SuppressWarnings(['UnusedMethodParameter', 'UnnecessaryGString'])
-    Set dsAnalysis(String l, OR or) {
+    private Set dsAnalysis(String l, OR or) {
         Set left = dsAnalysis(l, or.left)
         Set right = dsAnalysis(l, or.right)
         Set resultSet = []
@@ -278,7 +338,7 @@ class DetectionOfSigns {
     }
 
     @SuppressWarnings(['UnusedMethodParameter', 'UnnecessaryGString'])
-    Set dsAnalysis(String l, Minus minus) {
+    private Set dsAnalysis(String l, Minus minus) {
         Set operand = dsAnalysis(l, minus.operand)
         Set resultSet = []
 
@@ -295,7 +355,7 @@ class DetectionOfSigns {
     }
 
     @SuppressWarnings(['UnusedMethodParameter', 'UnnecessaryGString'])
-    Set dsAnalysis(String l, Negation negation) {
+    private Set dsAnalysis(String l, Negation negation) {
         Set operand = dsAnalysis(l, negation.operand)
         Set resultSet = []
 
@@ -309,7 +369,7 @@ class DetectionOfSigns {
     }
 
     @SuppressWarnings(['UnusedMethodParameter', 'UnnecessaryGString'])
-    Set dsAnalysis(String l, GreaterThan greaterThan) {
+    private Set dsAnalysis(String l, GreaterThan greaterThan) {
         Set left = dsAnalysis(l, greaterThan.left)
         Set right = dsAnalysis(l, greaterThan.right)
         Set resultSet = []
@@ -327,7 +387,7 @@ class DetectionOfSigns {
     }
 
     @SuppressWarnings(['UnusedMethodParameter', 'UnnecessaryGString'])
-    Set dsAnalysis(String l, LessThan lessThan) {
+    private Set dsAnalysis(String l, LessThan lessThan) {
         Set left = dsAnalysis(l, lessThan.left)
         Set right = dsAnalysis(l, lessThan.right)
         Set resultSet = []
@@ -345,7 +405,7 @@ class DetectionOfSigns {
     }
 
     @SuppressWarnings(['UnusedMethodParameter', 'UnnecessaryGString'])
-    Set dsAnalysis(String l, GreaterThanEqual greaterThanEqual) {
+    private Set dsAnalysis(String l, GreaterThanEqual greaterThanEqual) {
         Set left = dsAnalysis(l, greaterThanEqual.left)
         Set right = dsAnalysis(l, greaterThanEqual.right)
         Set resultSet = []
@@ -363,7 +423,7 @@ class DetectionOfSigns {
     }
 
     @SuppressWarnings(['UnusedMethodParameter', 'UnnecessaryGString'])
-    Set dsAnalysis(String l, LessThanEqual lessThanEqual) {
+    private Set dsAnalysis(String l, LessThanEqual lessThanEqual) {
         Set left = dsAnalysis(l, lessThanEqual.left)
         Set right = dsAnalysis(l, lessThanEqual.right)
         Set resultSet = []
@@ -381,7 +441,7 @@ class DetectionOfSigns {
     }
 
     @SuppressWarnings(['UnusedMethodParameter', 'UnnecessaryGString'])
-    Set dsAnalysis(String l, Equal equal) {
+    private Set dsAnalysis(String l, Equal equal) {
         Set left = dsAnalysis(l, equal.left)
         Set right = dsAnalysis(l, equal.right)
         Set resultSet = []
@@ -403,7 +463,7 @@ class DetectionOfSigns {
     }
 
     @SuppressWarnings(['UnusedMethodParameter', 'UnnecessaryGString'])
-    Set dsAnalysis(String l, NotEqual notEqual) {
+    private Set dsAnalysis(String l, NotEqual notEqual) {
         Set left = dsAnalysis(l, notEqual.left)
         Set right = dsAnalysis(l, notEqual.right)
         Set resultSet = []
