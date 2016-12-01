@@ -86,7 +86,16 @@ class DetectionOfSigns {
             log.error "Block: $label not found!!!"
             return
         }
-        dsExit[label] = dsEntries[label]
+        //dsExit[label] = dsEntries[label] <<< Don't do this! 
+        dsExit[label] = [:]
+        Set valueSet = [] as Set
+        dsEntries[label].keySet().each { key ->
+            dsEntries[label][key].each { value ->
+                valueSet.add(value)
+            }
+            dsExit[label].put(key, valueSet)
+        }
+
         if (!block.variableAssigned) {
             return
 //        } else if (block.variableAssigned && !block.variablesUsed) {
