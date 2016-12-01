@@ -49,7 +49,7 @@ class ReachingDefinitions {
             Tuple workListItem = extractFromWorklist(wlAlgorithm)
             String l = workListItem.first()
             String lPrime = workListItem.last()
-//            log.info "worklist item: (" + l + "," + lPrime + ')'
+            log.info 'worklist item: (' + l + ',' + lPrime + ')'
             calculateSolution(l)
             if (lPrime) {
                 if (rdExit[l].any { !(it in rdEntries[lPrime]) }) {

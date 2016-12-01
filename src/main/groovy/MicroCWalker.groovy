@@ -5,6 +5,7 @@ import MicroCParser.BreakStmtContext
 import MicroCParser.DeclContext
 import MicroCParser.Expr2Context
 import MicroCParser.ExprContext
+import MicroCParser.ExprnegateContext
 import MicroCParser.IdentifierContext
 import MicroCParser.IfelseStmtContext
 import MicroCParser.IntegerContext
@@ -23,6 +24,7 @@ import programanalysis.DetectionOfSigns
 import programanalysis.ReachingDefinitions
 import programanalysis.blocktypes.Addition
 import programanalysis.blocktypes.And
+import programanalysis.blocktypes.ArrayIdentifier
 import programanalysis.blocktypes.Assignment
 import programanalysis.blocktypes.Break
 import programanalysis.blocktypes.Continue
@@ -36,7 +38,9 @@ import programanalysis.blocktypes.If
 import programanalysis.blocktypes.IntegerBlock
 import programanalysis.blocktypes.LessThan
 import programanalysis.blocktypes.LessThanEqual
+import programanalysis.blocktypes.Minus
 import programanalysis.blocktypes.Multiplication
+import programanalysis.blocktypes.Negation
 import programanalysis.blocktypes.NotEqual
 import programanalysis.blocktypes.OR
 import programanalysis.blocktypes.Read
@@ -195,10 +199,23 @@ class MicroCWalker extends MicroCBaseListener {
     Block visit(AssignStmtContext ctx) {
         Assignment a = new Assignment()
         a = init(a)
-        a.variableAssigned = visit(ctx.identifier())
+        if (ctx.expr().size() > 1) {
+            a.variableAssigned = visit(ctx.identifier(), ctx.expr(0))
+            a.variablesUsed = ctx.expr().tail().collect { visit(it) }
+        } else {
+            a.variableAssigned = visit(ctx.identifier())
+            a.variablesUsed = ctx.expr().collect { visit(it) }
+        }
         a.statement = ctx.text
-        a.variablesUsed = ctx.expr().collect { visit(it) }
         return a
+    }
+
+    Block visit(IdentifierContext identifierContext, ExprContext exprContext) {
+        ArrayIdentifier arrayIdentifier = new ArrayIdentifier()
+        arrayIdentifier.index = visit(exprContext)
+        arrayIdentifier.statement = identifierContext.text
+        arrayIdentifier.identifier = visit(identifierContext)
+        return arrayIdentifier
     }
 
     @SuppressWarnings('UnusedMethodParameter')
@@ -214,8 +231,11 @@ class MicroCWalker extends MicroCBaseListener {
         init(r)
         r.statement = 'read: ' +
                 (ctx.expr()?.text ? ctx.identifier().text + '[' + ctx.expr().text + ']' : ctx.identifier().text)
-        r.variableAssigned = visit(ctx.identifier())
-        r.variablesUsed = [visit(ctx.expr())]
+        if (ctx.expr()) {
+            r.variableAssigned = visit(ctx.identifier(), ctx.expr())
+        } else {
+            r.variableAssigned = visit(ctx.identifier())
+        }
         return r
     }
 
@@ -406,6 +426,18 @@ class MicroCWalker extends MicroCBaseListener {
             assignment.right = visit(expr2Context.getChild(2))
         }
         return visit(expr2Context.getChild(0))
+    }
+
+    Block visit(ExprnegateContext exprnegateContext) {
+        String operator = exprnegateContext.getChild(0)
+        if (operator == '-') {
+            Minus minus = new Minus()
+            minus.operand = visit(exprnegateContext.getChild(1))
+            return minus
+        }
+        Negation negation = new Negation()
+        negation.operand = visit(exprnegateContext.getChild(1))
+        return negation
     }
 
     Block visit(IntegerContext integerContext) {
