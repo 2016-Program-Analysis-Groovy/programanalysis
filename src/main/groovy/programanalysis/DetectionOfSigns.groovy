@@ -23,7 +23,7 @@ import programanalysis.blocktypes.Subtraction
 class DetectionOfSigns {
 
     List<Tuple> currentWorkList
-    List<Tuple> pendingWorkList
+    Set<Tuple> pendingWorkList
     Map<String, Map<String, Set>> dsEntries = [:]
     Map<String, Map<String, Set>> dsExit = [:]
     Set defaultValues = ['+', '-', '0']
@@ -178,8 +178,15 @@ class DetectionOfSigns {
         pendingWorkList = []
     }
 
-    private List sortByRPO(List list) {
-        list.sort { Tuple a, Tuple b -> a.last() <=> b.first() ?: a.first() <=> b.last() }
+    @SuppressWarnings('SpaceAroundOperator')
+    private List sortByRPO(list) {
+        list.sort {
+            Tuple a, Tuple b -> extractCounterFromBlockLabel(a.first()) <=> extractCounterFromBlockLabel(b.first()) ?:
+                    extractCounterFromBlockLabel(a.first()) <=> extractCounterFromBlockLabel(b.last()) }
+    }
+
+    private Integer extractCounterFromBlockLabel(String label) {
+        label[1..label.size() - 1].toInteger()
     }
 
     @SuppressWarnings('NoDef')

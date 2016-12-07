@@ -5,7 +5,7 @@ import groovy.util.logging.Slf4j
 @Slf4j
 class ReachingDefinitions {
     List<Tuple> currentWorkList
-    List<Tuple> pendingWorkList
+    Set<Tuple> pendingWorkList
     Map rdEntries = [:]
     Map rdExit = [:]
     Map<String, List<Tuple>> rdKill = [:]
@@ -48,10 +48,12 @@ class ReachingDefinitions {
         counter = 0
         String workListOutput =''
         while (!isWorklistDone(wlAlgorithm)) {
+
             Tuple workListItem = extractFromWorklist(wlAlgorithm)
+
             String l = workListItem.first()
             String lPrime = workListItem.last()
-            workListOutput += 'worklist item: (' + l + ',' + lPrime + ')\n'
+//            workListOutput += 'worklist item: (' + l + ',' + lPrime + ')\n'
             counter++
             calculateSolution(l)
             if (lPrime) {
@@ -141,7 +143,7 @@ class ReachingDefinitions {
     }
 
     @SuppressWarnings('SpaceAroundOperator')
-    private List sortByRPO(List list) {
+    private List sortByRPO(list) {
         list.sort {
             Tuple a, Tuple b -> extractCounterFromBlockLabel(a.first()) <=> extractCounterFromBlockLabel(b.first()) ?:
                 extractCounterFromBlockLabel(a.first()) <=> extractCounterFromBlockLabel(b.last()) }
